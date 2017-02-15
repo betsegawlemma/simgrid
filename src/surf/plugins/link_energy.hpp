@@ -25,7 +25,7 @@ class PowerRange {
   double idle;
   double busy;
 
-  PowerRange(double idle, double min, double max) : idle(idle), min(min), max(max) {
+  PowerRange(double idle, double busy) : idle(idle), buys(busy) {
   }
 };
 
@@ -43,9 +43,9 @@ public:
 private:
   void initWattsRangeList();
   simgrid::s4u::Link *link = nullptr;
-  std::vector<PowerRange> power_range_watts_list;   /*< List of (idle_power,full_power) pairs*/
+  std::vector<PowerRange> power_range_watts_list;   /*< List of (idle_power,busy_power) pairs*/
 public:
-  double watts_off = 0.0; /*< Consumption when the machine is turned off (shutdown) */
+  double watts_off = 0.0; /*< Consumption when the link is turned off (shutdown) */
   double total_energy = 0.0; /*< Total energy consumed by the host */
   double last_updated;       /*< Timestamp of the last energy update event*/
 };
