@@ -74,6 +74,11 @@ void sg_link_exit()
  ***********/
 
 namespace simgrid {
+
+namespace xbt {
+template class Extendable<simgrid::s4u::Link>;
+}
+
 namespace s4u {
 Link* Link::byName(const char* name)
 {
@@ -106,6 +111,12 @@ int Link::sharingPolicy()
   return this->pimpl_->sharingPolicy();
 }
 
+
+/** Retrieve the property value (or nullptr if not set) */
+const char*Link::property(const char*key) {
+  return this->pimpl_->getProperty(key);
+}
+
 void Link::turnOn()
 {
   simgrid::simix::kernelImmediate([this]() {
@@ -117,6 +128,10 @@ void Link::turnOff()
   simgrid::simix::kernelImmediate([this]() {
     this->pimpl_->turnOff();
   });
+}
+
+bool Link::isOn() {
+  return this->pimpl_->isOn();
 }
 
 void* Link::getData()

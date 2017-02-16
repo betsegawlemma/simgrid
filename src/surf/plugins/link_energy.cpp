@@ -3,9 +3,9 @@
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "simgrid/plugins/link_energy.h"
+#include "simgrid/plugins/energy.h"
 #include "simgrid/simix.hpp"
-#include "src/surf/plugins/link_energy.hpp"
+#include "src/surf/network_interface.hpp"
 #include <utility>
 
 /** @addtogroup SURF_plugin_energy
@@ -33,10 +33,39 @@ and then use the following function to retrieve the consumption of a given link:
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_energy, surf, "Logging specific to the SURF energy plugin");
 
-using simgrid::energy::LinkEnergy;
 
 namespace simgrid {
 namespace energy {
+
+class PowerRange {
+  public:
+  double idle;
+  double busy;
+
+  PowerRange(double idle, double busy) : idle(idle), busy(busy) {
+  }
+};
+
+class LinkEnergy {
+public:
+  static simgrid::xbt::Extension<simgrid::s4u::Link, LinkEnergy> EXTENSION_ID;
+
+  explicit LinkEnergy(simgrid::s4u::Link *ptr);
+  ~LinkEnergy();
+
+  double getCurrentWattsValue(double link_load);
+  double getConsumedEnergy();
+  void update();
+
+private:
+  void initWattsRangeList();
+  simgrid::s4u::Link *link = nullptr;
+  std::vector<PowerRange> power_range_watts_list;   /*< List of (idle_power,busy_power) pairs*/
+public:
+  double watts_off = 0.0; /*< Consumption when the link is turned off (shutdown) */
+  double total_energy = 0.0; /*< Total energy consumed by the host */
+  double last_updated;       /*< Timestamp of the last energy update event*/
+};
 
 simgrid::xbt::Extension<simgrid::s4u::Link, LinkEnergy> LinkEnergy::EXTENSION_ID;
 
@@ -47,7 +76,7 @@ void LinkEnergy::update()
   double finish_time = surf_get_clock();
   double link_load;
   
-  link_load = lmm_constraint_get_usage(host->pimpl_cpu->constraint()) / host->pimpl_cpu->getPstateSpeedCurrent();
+  link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
 
   double previous_energy = this->total_energy;
 
@@ -64,7 +93,7 @@ void LinkEnergy::update()
 
   XBT_DEBUG(
       "[update_energy of %s] period=[%.2f-%.2f]; current power peak=%.0E flop/s; consumption change: %.2f J -> %.2f J",
-      link->name(), start_time, finish_time, host->pimpl_cpu->speed_.peak, previous_energy, energy_this_step);
+      link->name(), start_time, finish_time, link->bandwidth(), previous_energy, energy_this_step);
 }
 
 LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) : link(ptr), last_updated(surf_get_clock())
@@ -104,7 +133,7 @@ double LinkEnergy::getCurrentWattsValue(double link_load)
     double power_slope;
       power_slope = (busy_power - idle_power);
 
-    current_power = idle_power + (link_load / link.bandwidth()) * power_slope;
+    current_power = idle_power + (link_load / link->bandwidth()) * power_slope;
   }
   else { /* Our machine is idle, take the dedicated value! */
     current_power = range.idle;
@@ -154,26 +183,27 @@ void LinkEnergy::initWattsRangeList()
 
 }
 }
+using simgrid::energy::LinkEnergy;
 
 /* **************************** events  callback *************************** */
 static void onCreation(simgrid::s4u::Link& link) {
   link.extension_set(new LinkEnergy(&link));
 }
 
-static void onActionStateChange(simgrid::surf::NetworkAction *action, simgrid::surf::Action::State previous) {
-  for (simgrid::surf::Cpu* cpu : action->cpus()) {
-    simgrid::s4u::link* link = cpu->getHost();
-    if (host == nullptr)
+static void onActionStateChange(simgrid::surf::NetworkAction* action, simgrid::surf::Action::State previous)
+{
+  for (simgrid::s4u::Link* link : action->links()) {
+
+    if (link == nullptr)
       continue;
 
-    // Get the link_energy extension for the relevant link
+    // Get the host_energy extension for the relevant host
     LinkEnergy* link_energy = link->extension<LinkEnergy>();
 
     if (link_energy->last_updated < surf_get_clock())
       link_energy->update();
   }
 }
-
 static void onLinkStateChange(simgrid::s4u::Link &link) {
 
   LinkEnergy *link_energy = link.extension<LinkEnergy>();
@@ -186,7 +216,7 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
 
   LinkEnergy *link_energy = link.extension<LinkEnergy>();
   link_energy->update();
-  XBT_INFO("Total energy of link %s: %f Joules", link.cname(), link_energy->getConsumedEnergy());
+  XBT_INFO("Total energy of link %s: %f Joules", link.name(), link_energy->getConsumedEnergy());
 }
 
 /* **************************** Public interface *************************** */
@@ -196,7 +226,7 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
  */
 void sg_link_energy_plugin_init()
 {
-  if (HostEnergy::EXTENSION_ID.valid())
+  if (LinkEnergy::EXTENSION_ID.valid())
     return;
 
   LinkEnergy::EXTENSION_ID = simgrid::s4u::Link::extension_create<LinkEnergy>();
@@ -204,7 +234,7 @@ void sg_link_energy_plugin_init()
   simgrid::s4u::Link::onCreation.connect(&onCreation);
   simgrid::s4u::Link::onStateChange.connect(&onLinkStateChange);
   simgrid::s4u::Link::onDestruction.connect(&onLinkDestruction);
-  simgrid::surf::NetworkAction::onStateChange.connect(&onActionStateChange);
+  simgrid::s4u::Link::onCommunicationStateChange.connect(&onActionStateChange);//  simgrid::surf::NetworkAction::onStateChange.connect(&onActionStateChange);
 }
 
 /** @brief Returns the total energy consumed by the link so far (in Joules)
