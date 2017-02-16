@@ -43,6 +43,7 @@ namespace simgrid {
 
 typedef simgrid::s4u::NetZone simgrid_NetZone;
 typedef simgrid::s4u::Host simgrid_Host;
+typedef simgrid::s4u::Link simgrid_Link;
 typedef simgrid::s4u::Link Link;
 typedef simgrid::kernel::activity::ActivityImpl kernel_Activity;
 typedef simgrid::kernel::routing::NetPoint routing_NetPoint;
@@ -69,6 +70,7 @@ typedef struct simix_Host *smx_host_priv_t;
 
 typedef simgrid_NetZone* NetZone_t;
 typedef simgrid_Host* sg_host_t;
+typedef Link* sg_link_t;
 
 typedef kernel_Activity *smx_activity_t;
 

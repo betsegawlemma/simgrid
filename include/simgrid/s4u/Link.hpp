@@ -10,6 +10,10 @@
 
 #include <unordered_map>
 
+#include "xbt/dict.h"
+
+#include "xbt/Extendable.hpp"
+
 #include "xbt/signal.hpp"
 
 #include "simgrid/link.h"
@@ -19,12 +23,16 @@
  ***********/
 
 namespace simgrid {
-namespace surf {
-class NetworkAction;
+namespace surf{
+ class NetworkAction;
+};
+namespace xbt {
+  extern template class XBT_PUBLIC() Extendable<simgrid::s4u::Link>;
 };
 namespace s4u {
 /** @brief A Link represents the network facilities between [hosts](\ref simgrid::s4u::Host) */
-class Link {
+XBT_PUBLIC_CLASS Link : public simgrid::xbt::Extendable<Link>  {
+
   friend simgrid::surf::LinkImpl;
 
 private:
@@ -56,6 +64,15 @@ public:
 
   void turnOn();
   void turnOff();
+
+  xbt_dict_t properties();
+  const char*property(const char*key);
+  void setProperty(const char*key, const char *value);
+
+  /** Returns if that link is currently up and running */
+  bool isOn();
+  /** Returns if that link is currently down and offline */
+  bool isOff() { return !isOn(); }
 
   void* getData();
   void setData(void* d);
