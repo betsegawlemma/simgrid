@@ -74,7 +74,7 @@ smx_actor_t SIMIX_process_self()
  */
 int SIMIX_process_has_pending_comms(smx_actor_t process) {
 
-  return xbt_fifo_size(process->comms) > 0;
+  return process->comms.size() > 0;
 }
 
 /**
@@ -95,8 +95,8 @@ void SIMIX_process_cleanup(smx_actor_t process)
   xbt_os_mutex_acquire(simix_global->mutex);
 
   /* cancel non-blocking communications */
-  smx_activity_t synchro = static_cast<smx_activity_t>(xbt_fifo_pop(process->comms));
-  while (synchro != nullptr) {
+  smx_activity_t synchro = static_cast<smx_activity_t>(process->comms.front());
+  while (!process->comms.empty()) {
     simgrid::kernel::activity::Comm *comm = static_cast<simgrid::kernel::activity::Comm*>(synchro);
 
     /* make sure no one will finish the comm after this process is destroyed,
@@ -122,20 +122,21 @@ void SIMIX_process_cleanup(smx_actor_t process)
 
       if (comm->detached && comm->src_proc != nullptr) {
         /* the comm will be freed right now, remove it from the sender */
-        xbt_fifo_remove(comm->src_proc->comms, comm);
+        comm->src_proc->comms.remove(comm);
       }
       
       comm->unref();
     } else {
       xbt_die("Communication synchro %p is in my list but I'm not the sender nor the receiver", synchro);
     }
-    synchro = static_cast<smx_activity_t>(xbt_fifo_pop(process->comms));
+    process->comms.pop_front();
+    synchro = static_cast<smx_activity_t>(process->comms.front());
   }
 
   XBT_DEBUG("%p should not be run anymore",process);
   simix_global->process_list.erase(process->pid);
   if (process->host)
-    xbt_swag_remove(process, sg_host_simix(process->host)->process_list);
+    xbt_swag_remove(process, process->host->extension<simgrid::simix::Host>()->process_list);
   xbt_swag_insert(process, simix_global->process_to_destroy);
   process->context->iwannadie = 0;
 
@@ -166,8 +167,6 @@ ActorImpl::~ActorImpl()
   delete this->context;
   if (this->properties)
     xbt_dict_free(&this->properties);
-  if (this->comms != nullptr)
-    xbt_fifo_free(this->comms);
   if (this->on_exit)
     xbt_dynar_free(&this->on_exit);
 }
@@ -178,7 +177,6 @@ void create_maestro(std::function<void()> code)
   /* Create maestro process and initialize it */
   maestro = new simgrid::simix::ActorImpl();
   maestro->pid = simix_process_maxpid++;
-  maestro->ppid = -1;
   maestro->name = "";
   maestro->data = nullptr;
 
@@ -218,12 +216,9 @@ smx_actor_t SIMIX_process_create(
                           std::function<void()> code,
                           void *data,
                           sg_host_t host,
-                          double kill_time,
                           xbt_dict_t properties,
-                          int auto_restart,
                           smx_actor_t parent_process)
 {
-  smx_actor_t process = nullptr;
 
   XBT_DEBUG("Start process %s on host '%s'", name, host->cname());
 
@@ -231,77 +226,57 @@ smx_actor_t SIMIX_process_create(
     XBT_WARN("Cannot launch process '%s' on failed host '%s'", name, host->cname());
     return nullptr;
   }
-  else {
-    process = new simgrid::simix::ActorImpl();
 
-    xbt_assert(code && host != nullptr, "Invalid parameters");
-    /* Process data */
-    process->pid = simix_process_maxpid++;
-    process->name = simgrid::xbt::string(name);
-    process->host = host;
-    process->data = data;
-    process->comms = xbt_fifo_new();
-    process->simcall.issuer = process;
-    /* Initiliaze data segment to default value */
-    SIMIX_segment_index_set(process, -1);
+  smx_actor_t process = new simgrid::simix::ActorImpl();
 
-    if (parent_process != nullptr) {
-      process->ppid = parent_process->pid;
-      /* SMPI process have their own data segment and each other inherit from their father */
+  xbt_assert(code && host != nullptr, "Invalid parameters");
+  /* Process data */
+  process->pid            = simix_process_maxpid++;
+  process->name           = simgrid::xbt::string(name);
+  process->host           = host;
+  process->data           = data;
+  process->simcall.issuer = process;
+
+  if (parent_process != nullptr) {
+    process->ppid = parent_process->pid;
+/* SMPI process have their own data segment and each other inherit from their father */
 #if HAVE_SMPI
-       if( smpi_privatize_global_variables) {
-         if (parent_process->pid != 0) {
-           SIMIX_segment_index_set(process, parent_process->segment_index);
-         } else {
-           SIMIX_segment_index_set(process, process->pid - 1);
-         }
-       }
-#endif
-     } else {
-       process->ppid = -1;
-     }
-
-    /* Process data for auto-restart */
-    process->auto_restart = auto_restart;
-    process->code = code;
-
-    XBT_VERB("Create context %s", process->name.c_str());
-    process->context = SIMIX_context_new(
-      std::move(code),
-      simix_global->cleanup_process_function, process);
-
-    /* Add properties */
-    process->properties = properties;
-
-    /* Add the process to it's host process list */
-    xbt_swag_insert(process, sg_host_simix(host)->process_list);
-
-    XBT_DEBUG("Start context '%s'", process->name.c_str());
-
-    /* Now insert it in the global process list and in the process to run list */
-    simix_global->process_list[process->pid] = process;
-    XBT_DEBUG("Inserting %s(%s) in the to_run list", process->cname(), host->cname());
-    xbt_dynar_push_as(simix_global->process_to_run, smx_actor_t, process);
-
-    if (kill_time > SIMIX_get_clock() && simix_global->kill_process_function) {
-      XBT_DEBUG("Process %s(%s) will be kill at time %f", process->cname(), process->host->cname(), kill_time);
-      process->kill_timer = SIMIX_timer_set(kill_time, [=]() {
-        simix_global->kill_process_function(process);
-      });
+    if (smpi_privatize_global_variables) {
+      if (parent_process->pid != 0) {
+        SIMIX_segment_index_set(process, parent_process->segment_index);
+      } else {
+        SIMIX_segment_index_set(process, process->pid - 1);
+      }
     }
-
-    /* Tracing the process creation */
-    TRACE_msg_process_create(process->cname(), process->pid, process->host);
+#endif
   }
+
+  process->code         = code;
+
+  XBT_VERB("Create context %s", process->name.c_str());
+  process->context = SIMIX_context_new(std::move(code), simix_global->cleanup_process_function, process);
+
+  /* Add properties */
+  process->properties = properties;
+
+  /* Add the process to it's host process list */
+  xbt_swag_insert(process, host->extension<simgrid::simix::Host>()->process_list);
+
+  XBT_DEBUG("Start context '%s'", process->name.c_str());
+
+  /* Now insert it in the global process list and in the process to run list */
+  simix_global->process_list[process->pid] = process;
+  XBT_DEBUG("Inserting %s(%s) in the to_run list", process->cname(), host->cname());
+  xbt_dynar_push_as(simix_global->process_to_run, smx_actor_t, process);
+
+  /* Tracing the process creation */
+  TRACE_msg_process_create(process->cname(), process->pid, process->host);
+
   return process;
 }
 
-smx_actor_t SIMIX_process_attach(
-  const char* name,
-  void *data,
-  const char* hostname,
-  xbt_dict_t properties,
-  smx_actor_t parent_process)
+smx_actor_t SIMIX_process_attach(const char* name, void* data, const char* hostname, xbt_dict_t properties,
+                                 smx_actor_t parent_process)
 {
   // This is mostly a copy/paste from SIMIX_process_new(),
   // it'd be nice to share some code between those two functions.
@@ -321,11 +296,8 @@ smx_actor_t SIMIX_process_attach(
   process->name = std::string(name);
   process->host = host;
   process->data = data;
-  process->comms = xbt_fifo_new();
   process->simcall.issuer = process;
-  process->ppid = -1;
-  /* Initiliaze data segment to default value */
-  SIMIX_segment_index_set(process, -1);
+
   if (parent_process != nullptr) {
     process->ppid = parent_process->pid;
     /* SMPI process have their own data segment and each other inherit from their father */
@@ -341,7 +313,6 @@ smx_actor_t SIMIX_process_attach(
   }
 
   /* Process data for auto-restart */
-  process->auto_restart = false;
   process->code = nullptr;
 
   XBT_VERB("Create context %s", process->name.c_str());
@@ -354,7 +325,7 @@ smx_actor_t SIMIX_process_attach(
   process->properties = properties;
 
   /* Add the process to it's host process list */
-  xbt_swag_insert(process, sg_host_simix(host)->process_list);
+  xbt_swag_insert(process, host->extension<simgrid::simix::Host>()->process_list);
 
   /* Now insert it in the global process list and in the process to run list */
   simix_global->process_list[process->pid] = process;
@@ -443,7 +414,7 @@ void SIMIX_process_kill(smx_actor_t process, smx_actor_t issuer) {
       exec->unref();
 
     } else if (comm != nullptr) {
-      xbt_fifo_remove(process->comms, process->waiting_synchro);
+      process->comms.remove(process->waiting_synchro);
       comm->cancel();
 
       // Remove first occurrence of &process->simcall:
@@ -504,7 +475,7 @@ void SIMIX_process_throw(smx_actor_t process, xbt_errcat_t cat, int value, const
 
     simgrid::kernel::activity::Comm *comm = dynamic_cast<simgrid::kernel::activity::Comm*>(process->waiting_synchro);
     if (comm != nullptr) {
-      xbt_fifo_remove(process->comms, comm);
+      process->comms.remove(comm);
       comm->cancel();
     }
 
@@ -559,9 +530,9 @@ void simcall_HANDLER_process_set_host(smx_simcall_t simcall, smx_actor_t process
 void SIMIX_process_change_host(smx_actor_t process, sg_host_t dest)
 {
   xbt_assert((process != nullptr), "Invalid parameters");
-  xbt_swag_remove(process, sg_host_simix(process->host)->process_list);
+  xbt_swag_remove(process, process->host->extension<simgrid::simix::Host>()->process_list);
   process->host = dest;
-  xbt_swag_insert(process, sg_host_simix(dest)->process_list);
+  xbt_swag_insert(process, dest->extension<simgrid::simix::Host>()->process_list);
 }
 
 
@@ -644,7 +615,7 @@ void* SIMIX_process_self_get_data()
   if (!self) {
     return nullptr;
   }
-  return SIMIX_process_get_data(self);
+  return self->data;
 }
 
 void SIMIX_process_self_set_data(void *data)
@@ -652,11 +623,6 @@ void SIMIX_process_self_set_data(void *data)
   smx_actor_t self = SIMIX_process_self();
 
   SIMIX_process_set_data(self, data);
-}
-
-void* SIMIX_process_get_data(smx_actor_t process)
-{
-  return process->data;
 }
 
 void SIMIX_process_set_data(smx_actor_t process, void *data)
@@ -935,8 +901,14 @@ smx_actor_t SIMIX_process_restart(smx_actor_t process, smx_actor_t issuer) {
   SIMIX_process_kill(process, issuer);
 
   //start the new process
-  return simix_global->create_process_function(arg.name.c_str(), std::move(arg.code), arg.data, arg.host,
-      arg.kill_time, arg.properties, arg.auto_restart, nullptr);
+  smx_actor_t actor = simix_global->create_process_function(arg.name.c_str(), std::move(arg.code), arg.data, arg.host,
+                                                            arg.properties, nullptr);
+  if (arg.kill_time >= 0)
+    simcall_process_set_kill_time(actor, arg.kill_time);
+  if (arg.auto_restart)
+    simcall_process_auto_restart_set(actor, arg.auto_restart);
+
+  return actor;
 }
 
 void SIMIX_segment_index_set(smx_actor_t proc, int index){
@@ -960,14 +932,8 @@ void SIMIX_segment_index_set(smx_actor_t proc, int index){
  * \param properties the properties of the process
  * \param auto_restart either it is autorestarting or not.
  */
-smx_actor_t simcall_process_create(const char *name,
-                              xbt_main_func_t code,
-                              void *data,
-                              sg_host_t host,
-                              double kill_time,
-                              int argc, char **argv,
-                              xbt_dict_t properties,
-                              int auto_restart)
+smx_actor_t simcall_process_create(const char* name, xbt_main_func_t code, void* data, sg_host_t host, int argc,
+                                   char** argv, xbt_dict_t properties)
 {
   if (name == nullptr)
     name = "";
@@ -975,21 +941,17 @@ smx_actor_t simcall_process_create(const char *name,
   for (int i = 0; i != argc; ++i)
     xbt_free(argv[i]);
   xbt_free(argv);
-  smx_actor_t res = simcall_process_create(name,
-    std::move(wrapped_code),
-    data, host, kill_time, properties, auto_restart);
+  smx_actor_t res = simcall_process_create(name, std::move(wrapped_code), data, host, properties);
   return res;
 }
 
-smx_actor_t simcall_process_create(
-  const char *name, std::function<void()> code, void *data,
-  sg_host_t host, double kill_time,
-  xbt_dict_t properties, int auto_restart)
+smx_actor_t simcall_process_create(const char* name, std::function<void()> code, void* data, sg_host_t host,
+                                   xbt_dict_t properties)
 {
   if (name == nullptr)
     name = "";
   smx_actor_t self = SIMIX_process_self();
-  return simgrid::simix::kernelImmediate([name, code, data, host, kill_time, properties, auto_restart, self] {
-    return SIMIX_process_create(name, std::move(code), data, host, kill_time, properties, auto_restart, self);
+  return simgrid::simix::kernelImmediate([name, code, data, host, properties, self] {
+    return SIMIX_process_create(name, std::move(code), data, host, properties, self);
   });
 }

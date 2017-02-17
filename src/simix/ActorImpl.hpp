@@ -8,8 +8,8 @@
 
 #include "simgrid/s4u/Actor.hpp"
 #include "src/simix/popping_private.h"
-#include "xbt/fifo.h"
 #include "xbt/swag.h"
+#include<list>
 
 typedef struct s_smx_process_exit_fun {
   int_f_pvoid_pvoid_t fun;
@@ -41,7 +41,7 @@ public:
   s_xbt_swag_hookup_t destroy_hookup   = { nullptr, nullptr }; /* simix_global->process_to_destroy */
 
   unsigned long pid  = 0;
-  unsigned long ppid = 0;
+  unsigned long ppid = -1;
   simgrid::xbt::string name;
   const char* cname() { return name.c_str(); }
   sg_host_t host        = nullptr; /* the host on which the process is running */
@@ -56,7 +56,7 @@ public:
 
   sg_host_t new_host            = nullptr; /* if not null, the host on which the process must migrate to */
   smx_activity_t waiting_synchro = nullptr; /* the current blocking synchro if any */
-  xbt_fifo_t comms              = nullptr; /* the current non-blocking communication synchros */
+  std::list<smx_activity_t> comms               ;           /* the current non-blocking communication synchros */
   xbt_dict_t properties         = nullptr;
   s_smx_simcall_t simcall;
   void *data          = nullptr; /* kept for compatibility, it should be replaced with moddata */
@@ -64,7 +64,7 @@ public:
 
   std::function<void()> code;
   smx_timer_t kill_timer = nullptr;
-  int segment_index      = 0; /* Reference to an SMPI process' data segment. Default value is -1 if not in SMPI context*/
+  int segment_index = -1; /* Reference to an SMPI process' data segment. Default value is -1 if not in SMPI context*/
 
   friend void intrusive_ptr_add_ref(ActorImpl* process)
   {
@@ -104,9 +104,7 @@ XBT_PRIVATE smx_actor_t SIMIX_process_create(
                           std::function<void()> code,
                           void *data,
                           sg_host_t host,
-                          double kill_time,
                           xbt_dict_t properties,
-                          int auto_restart,
                           smx_actor_t parent_process);
 
 XBT_PRIVATE void SIMIX_process_runall();
@@ -120,7 +118,6 @@ XBT_PRIVATE void SIMIX_process_change_host(smx_actor_t process, sg_host_t dest);
 XBT_PRIVATE smx_activity_t SIMIX_process_suspend(smx_actor_t process, smx_actor_t issuer);
 XBT_PRIVATE void SIMIX_process_resume(smx_actor_t process);
 XBT_PRIVATE int SIMIX_process_get_PID(smx_actor_t self);
-XBT_PRIVATE void* SIMIX_process_get_data(smx_actor_t process);
 XBT_PRIVATE void SIMIX_process_set_data(smx_actor_t process, void *data);
 XBT_PRIVATE smx_actor_t SIMIX_process_get_by_name(const char* name);
 XBT_PRIVATE int SIMIX_process_is_suspended(smx_actor_t process);
