@@ -59,14 +59,12 @@ namespace simgrid {
     {
       for (auto arg : boot_processes) {
         XBT_DEBUG("Booting Process %s(%s) right now", arg->name.c_str(), arg->host->cname());
-        simix_global->create_process_function(arg->name.c_str(),
-            arg->code,
-            nullptr,
-            arg->host,
-            arg->kill_time,
-            arg->properties,
-            arg->auto_restart,
-            nullptr);
+        smx_actor_t actor = simix_global->create_process_function(arg->name.c_str(), arg->code, nullptr, arg->host,
+                                                                  arg->properties, nullptr);
+        if (arg->kill_time >= 0)
+          simcall_process_set_kill_time(actor, arg->kill_time);
+        if (arg->auto_restart)
+          simcall_process_auto_restart_set(actor, arg->auto_restart);
       }
     }
 
@@ -75,7 +73,7 @@ namespace simgrid {
 /** @brief Stop the host if it is on */
 void SIMIX_host_off(sg_host_t h, smx_actor_t issuer)
 {
-  smx_host_priv_t host = sg_host_simix(h);
+  simgrid::simix::Host* host = h->extension<simgrid::simix::Host>();
 
   xbt_assert((host != nullptr), "Invalid parameters");
 
@@ -111,11 +109,6 @@ const char* SIMIX_host_self_get_name()
   return host->cname();
 }
 
-void _SIMIX_host_free_process_arg(void *data)
-{
-  smx_process_arg_t arg = *(static_cast<smx_process_arg_t*>(data));
-  delete arg;
-}
 /**
  * \brief Add a process to the list of the processes that the host will restart when it comes back
  * This function add a process to the list of the processes that will be restarted when the host comes
@@ -140,20 +133,22 @@ void SIMIX_host_add_auto_restart_process(
     xbt_dict_set(watched_hosts_lib, host->cname(), host, nullptr);
     XBT_DEBUG("Push host %s to watched_hosts_lib because state == SURF_RESOURCE_OFF", host->cname());
   }
-  sg_host_simix(host)->auto_restart_processes.push_back(arg);
+  host->extension<simgrid::simix::Host>()->auto_restart_processes.push_back(arg);
 }
 /** @brief Restart the list of processes that have been registered to the host */
 void SIMIX_host_autorestart(sg_host_t host)
 {
-  std::vector<simgrid::simix::ProcessArg*> process_list = sg_host_simix(host)->auto_restart_processes;
-  if (process_list.empty())
-    return;
+  std::vector<simgrid::simix::ProcessArg*> process_list =
+      host->extension<simgrid::simix::Host>()->auto_restart_processes;
 
   for (auto arg : process_list) {
-
     XBT_DEBUG("Restarting Process %s@%s right now", arg->name.c_str(), arg->host->cname());
-    simix_global->create_process_function(arg->name.c_str(), arg->code, nullptr, arg->host, arg->kill_time,
-        arg->properties, arg->auto_restart, nullptr);
+    smx_actor_t actor = simix_global->create_process_function(arg->name.c_str(), arg->code, nullptr, arg->host,
+                                                              arg->properties, nullptr);
+    if (arg->kill_time >= 0)
+      simcall_process_set_kill_time(actor, arg->kill_time);
+    if (arg->auto_restart)
+      simcall_process_auto_restart_set(actor, arg->auto_restart);
   }
   process_list.clear();
 }

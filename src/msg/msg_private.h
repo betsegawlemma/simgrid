@@ -12,13 +12,21 @@
 #include "src/kernel/activity/SynchroExec.hpp"
 #include "src/kernel/activity/SynchroComm.hpp"
 
-SG_BEGIN_DECL()
+#include <xbt/Extendable.hpp>
 
 /**************** datatypes **********************************/
-/********************************* Host **************************************/
-typedef struct s_msg_host_priv {
-  std::vector<int> *file_descriptor_table;
-} s_msg_host_priv_t;
+/**************************** Host Extension *********************************/
+namespace simgrid {
+class MsgHostExt {
+public:
+  static simgrid::xbt::Extension<s4u::Host, MsgHostExt> EXTENSION_ID;
+
+  ~MsgHostExt() {
+    delete file_descriptor_table;
+  }
+  std::vector<int>* file_descriptor_table = nullptr; // Created lazily on need
+};
+}
 /********************************* Task **************************************/
 
 typedef struct simdata_task {
@@ -63,20 +71,14 @@ typedef struct simdata_file {
   smx_file_t smx_file;
 } s_simdata_file_t;
 
-XBT_PRIVATE int __MSG_host_get_file_descriptor_id(msg_host_t host);
-XBT_PRIVATE void __MSG_host_release_file_descriptor_id(msg_host_t host, int id);
-
 /******************************* Process *************************************/
 
-typedef struct simdata_process {
-  msg_host_t m_host;              /* the host on which the process is running */
-  msg_host_t put_host;            /* used for debugging purposes */
-  smx_activity_t waiting_action;
-  msg_task_t waiting_task;
-  msg_error_t last_errno;       /* the last value returned by a MSG_function */
-
-  void* data;                   /* user data */
-} s_simdata_process_t, *simdata_process_t;
+class MsgActorExt {
+public:
+  explicit MsgActorExt(void* d) : data(d) {}
+  msg_error_t errno_ = MSG_OK;  /* the last value returned by a MSG_function */
+  void* data = nullptr; /* user data */
+};
 
 typedef struct process_arg {
   const char *name;
@@ -103,22 +105,20 @@ typedef struct MSG_Global {
   void_f_pvoid_t process_data_cleanup;
 } s_MSG_Global_t, *MSG_Global_t;
 
-/*extern MSG_Global_t msg_global;*/
 XBT_PUBLIC_DATA(MSG_Global_t) msg_global;
 
 /*************************************************************/
+SG_BEGIN_DECL()
+
 XBT_PRIVATE msg_host_t __MSG_host_create(sg_host_t host);
 XBT_PRIVATE msg_storage_t __MSG_storage_create(smx_storage_t storage);
-XBT_PRIVATE void __MSG_host_priv_free(msg_host_priv_t priv);
 XBT_PRIVATE void __MSG_storage_destroy(msg_storage_priv_t host);
 XBT_PRIVATE void __MSG_file_destroy(msg_file_priv_t host);
 
 XBT_PRIVATE void MSG_process_cleanup_from_SIMIX(smx_actor_t smx_proc);
-XBT_PRIVATE smx_actor_t MSG_process_create_from_SIMIX(const char *name,
-                                   std::function<void()> code, void *data,
-                                   sg_host_t host, double kill_time,
-                                   xbt_dict_t properties, int auto_restart,
-                                   smx_actor_t parent_process);
+XBT_PRIVATE smx_actor_t MSG_process_create_from_SIMIX(const char* name, std::function<void()> code, void* data,
+                                                      sg_host_t host, xbt_dict_t properties,
+                                                      smx_actor_t parent_process);
 XBT_PRIVATE void MSG_comm_copy_data_from_SIMIX(smx_activity_t comm, void* buff, size_t buff_size);
 
 XBT_PRIVATE void MSG_post_create_environment();
