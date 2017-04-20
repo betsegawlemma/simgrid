@@ -1,0 +1,41 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
+<platform version="4">
+  <AS id="AS0" routing="Full">
+    <host id="Host0" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0" state="OFF">
+      <prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
+      <prop id="watt_off" value="0" />
+    </host>
+    <host id="Host2" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0" state="OFF">
+      <prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
+      <prop id="watt_off" value="0" />
+    </host>
+
+    <link id="LINK_HOST0" bandwidth="113MBps" latency="1ns">
+      <prop id = "watts" value="10.3581:10.7479" />
+      <prop id = "watt_off" value="10.3581" />
+    </link>
+
+    <link id="SWITCH" bandwidth="113MBps" latency="1ns" sharing_policy="FATPIPE">
+      <prop id = "watts" value="10.3581:11.1378" />
+      <prop id = "watt_off" value="10.3581" />
+    </link>
+
+    <link id="LINK_HOST2" bandwidth="113MBps" latency="1ns">
+      <prop id = "watts" value="10.3581:10.7479" />
+      <prop id = "watt_off" value="10.3581" />
+    </link>
+
+    <route src="Host0" dst="Host2">
+      <link_ctn id="LINK_HOST0"/>
+      <link_ctn id="SWITCH"/>
+      <link_ctn id="LINK_HOST2"/>
+    </route>
+
+    <route src="Host2" dst="Host0">
+      <link_ctn id="LINK_HOST2"/>
+      <link_ctn id="SWITCH"/>
+      <link_ctn id="LINK_HOST0"/>
+    </route>
+  </AS>
+</platform>

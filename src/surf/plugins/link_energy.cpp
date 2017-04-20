@@ -13,7 +13,7 @@
 
 This is the energy plugin, enabling to account for the dissipated energy in the simulated platform.
 
-The energy consumption of a link depends directly of its current traffic load. Specify that consumption in your platform file as follows:
+The energy consumption of a link depends directly on its current traffic load. Specify that consumption in your platform file as follows:
 
 \verbatim
 <link id="SWITCH1" bandwidth="125000000" latency="5E-5" sharing_policy="SHARED" >
@@ -60,6 +60,8 @@ public:
 private:
   void initWattsRangeList();
   simgrid::s4u::Link *link = nullptr;
+  simgrid::s4u::Link *up_link = nullptr;
+  simgrid::s4u::Link *down_link = nullptr;
   std::vector<PowerRange> power_range_watts_list;   /*< List of (idle_power,busy_power) pairs*/
 public:
   double watts_off = 0.0; /*< Consumption when the link is turned off (shutdown) */
@@ -75,16 +77,51 @@ void LinkEnergy::update()
   double start_time = this->last_updated;
   double finish_time = surf_get_clock();
   double link_load;
+  double uplink_load;
+  double downlink_load;
   
-  link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+//  link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
 
   double previous_energy = this->total_energy;
 
   double instantaneous_consumption;
-  if (link->isOff())
+
+  char* lnk;
+  char* lnk_name;
+
+  lnk_name = link->name();
+  lnk_down = strstr(lnk_name,"_DOWN");
+  lnk_up = strstr(lnk_name,"_UP");
+
+  if (link->isOff()){
     instantaneous_consumption = this->watts_off;
-  else
+  }else if(lnk_down){
+
+    downlink_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+
+    strncpy(lnk_down,"_UP\0",4);
+    up_link = link.byName(lnk_name);
+    uplink_load =  lmm_constraint_get_usage(up_link->pimpl_->constraint());  
+
+    link_load = downlink_load + uplink_load;
     instantaneous_consumption = this->getCurrentWattsValue(link_load);
+
+  }else if(lnk_up){
+
+    uplink_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+
+    strncpy(lnk_up,"_DOWN\0",6);
+    down_link = link.byName(lnk_name);
+    downlink_load =  lmm_constraint_get_usage(down_link->pimpl_->constraint());  
+
+    link_load = downlink_load + uplink_load;
+    instantaneous_consumption = this->getCurrentWattsValue(link_load);
+
+  }else{
+
+    link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+
+  }
 
   double energy_this_step = instantaneous_consumption*(finish_time-start_time);
 
@@ -234,7 +271,8 @@ void sg_link_energy_plugin_init()
   simgrid::s4u::Link::onCreation.connect(&onCreation);
   simgrid::s4u::Link::onStateChange.connect(&onLinkStateChange);
   simgrid::s4u::Link::onDestruction.connect(&onLinkDestruction);
-  simgrid::s4u::Link::onCommunicationStateChange.connect(&onActionStateChange);//  simgrid::surf::NetworkAction::onStateChange.connect(&onActionStateChange);
+  simgrid::s4u::Link::onCommunicationStateChange.connect(&onActionStateChange);//simgrid::surf::NetworkAction::onStateChange.connect(&onActionStateChange);
+  
 }
 
 /** @brief Returns the total energy consumed by the link so far (in Joules)
