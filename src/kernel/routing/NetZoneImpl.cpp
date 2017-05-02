@@ -1,11 +1,11 @@
-/* Copyright (c) 2006-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2006-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "src/kernel/routing/NetZoneImpl.hpp"
-#include "simgrid/s4u/engine.hpp"
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Engine.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "src/kernel/routing/NetPoint.hpp"
 #include "src/surf/cpu_interface.hpp"
 #include "src/surf/network_interface.hpp"
@@ -315,7 +315,9 @@ void NetZoneImpl::getGlobalRoute(routing::NetPoint* src, routing::NetPoint* dst,
   XBT_DEBUG("Resolve route from '%s' to '%s'", src->cname(), dst->cname());
 
   /* Find how src and dst are interconnected */
-  NetZoneImpl *common_ancestor, *src_ancestor, *dst_ancestor;
+  NetZoneImpl *common_ancestor;
+  NetZoneImpl *src_ancestor;
+  NetZoneImpl *dst_ancestor;
   find_common_ancestors(src, dst, &common_ancestor, &src_ancestor, &dst_ancestor);
   XBT_DEBUG("elements_father: common ancestor '%s' src ancestor '%s' dst ancestor '%s'", common_ancestor->name(),
             src_ancestor->name(), dst_ancestor->name());

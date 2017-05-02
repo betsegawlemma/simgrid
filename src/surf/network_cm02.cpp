@@ -1,5 +1,4 @@
-/* Copyright (c) 2013-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2013-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -8,7 +7,7 @@
 
 #include "maxmin_private.hpp"
 #include "network_cm02.hpp"
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "simgrid/sg_config.h"
 #include "src/instr/instr_private.h" // TRACE_is_enabled(). FIXME: remove by subscribing tracing to the surf signals
 
@@ -167,9 +166,6 @@ NetworkCm02Model::NetworkCm02Model(void (*specificSolveFun)(lmm_system_t self))
   maxminSystem_->solve_fun = specificSolveFun;
 }
 
-
-NetworkCm02Model::~NetworkCm02Model() {}
-
 LinkImpl* NetworkCm02Model::createLink(const char* name, double bandwidth, double latency,
                                        e_surf_link_sharing_policy_t policy)
 {
@@ -239,8 +235,7 @@ void NetworkCm02Model::updateActionsStateFull(double now, double delta)
           action->latency_ = 0.0;
         }
         if (action->latency_ == 0.0 && !(action->isSuspended()))
-          lmm_update_variable_weight(maxminSystem_, action->getVariable(),
-              action->weight_);
+          lmm_update_variable_weight(maxminSystem_, action->getVariable(), action->weight_);
       }
       if (TRACE_is_enabled()) {
         int n = lmm_get_number_of_cnst_from_var(maxminSystem_, action->getVariable());
@@ -266,13 +261,8 @@ void NetworkCm02Model::updateActionsStateFull(double now, double delta)
     if (action->getMaxDuration() != NO_MAX_DURATION)
       action->updateMaxDuration(delta);
       
-    if ((action->getRemains() <= 0) &&
-        (lmm_get_variable_weight(action->getVariable()) > 0)) {
-      action->finish();
-      action->setState(Action::State::done);
-      action->gapRemove();
-    } else if (((action->getMaxDuration() != NO_MAX_DURATION)
-        && (action->getMaxDuration() <= 0))) {
+    if (((action->getRemains() <= 0) && (lmm_get_variable_weight(action->getVariable()) > 0)) ||
+        ((action->getMaxDuration() > NO_MAX_DURATION) && (action->getMaxDuration() <= 0))) {
       action->finish();
       action->setState(Action::State::done);
       action->gapRemove();
@@ -283,11 +273,8 @@ void NetworkCm02Model::updateActionsStateFull(double now, double delta)
 Action* NetworkCm02Model::communicate(s4u::Host* src, s4u::Host* dst, double size, double rate)
 {
   int failed = 0;
-  double bandwidth_bound;
   double latency = 0.0;
   std::vector<LinkImpl*>* back_route = nullptr;
-  int constraints_per_variable = 0;
-
   std::vector<LinkImpl*>* route = new std::vector<LinkImpl*>();
 
   XBT_IN("(%s,%s,%g,%g)", src->cname(), dst->cname(), size, rate);
@@ -310,15 +297,15 @@ Action* NetworkCm02Model::communicate(s4u::Host* src, s4u::Host* dst, double siz
   }
 
   NetworkCm02Action *action = new NetworkCm02Action(this, size, failed);
-  action->weight_ = action->latency_ = latency;
-
+  action->weight_ = latency;
+  action->latency_ = latency;
   action->rate_ = rate;
   if (updateMechanism_ == UM_LAZY) {
     action->indexHeap_ = -1;
     action->lastUpdate_ = surf_get_clock();
   }
 
-  bandwidth_bound = -1.0;
+  double bandwidth_bound = -1.0;
   if (sg_weight_S_parameter > 0)
     for (auto link : *route)
       action->weight_ += sg_weight_S_parameter / link->bandwidth();
@@ -340,7 +327,7 @@ Action* NetworkCm02Model::communicate(s4u::Host* src, s4u::Host* dst, double siz
               action->latency_);
   }
 
-  constraints_per_variable = route->size();
+  int constraints_per_variable = route->size();
   if (back_route != nullptr)
     constraints_per_variable += back_route->size();
 
@@ -456,10 +443,11 @@ void NetworkCm02Link::setBandwidth(double value)
     double delta = sg_weight_S_parameter / value - sg_weight_S_parameter / (bandwidth_.peak * bandwidth_.scale);
 
     lmm_variable_t var;
-    lmm_element_t elem = nullptr, nextelem = nullptr;
+    lmm_element_t elem = nullptr;
+    lmm_element_t nextelem = nullptr;
     int numelem = 0;
     while ((var = lmm_get_var_from_cnst_safe(model()->getMaxminSystem(), constraint(), &elem, &nextelem, &numelem))) {
-      NetworkCm02Action *action = (NetworkCm02Action*) lmm_variable_id(var);
+      NetworkCm02Action *action = static_cast<NetworkCm02Action*>(lmm_variable_id(var));
       action->weight_ += delta;
       if (!action->isSuspended())
         lmm_update_variable_weight(model()->getMaxminSystem(), action->getVariable(), action->weight_);
@@ -478,7 +466,7 @@ void NetworkCm02Link::setLatency(double value)
   latency_.peak = value;
 
   while ((var = lmm_get_var_from_cnst_safe(model()->getMaxminSystem(), constraint(), &elem, &nextelem, &numelem))) {
-    NetworkCm02Action *action = (NetworkCm02Action*) lmm_variable_id(var);
+    NetworkCm02Action *action = static_cast<NetworkCm02Action*>(lmm_variable_id(var));
     action->latCurrent_ += delta;
     action->weight_ += delta;
     if (action->rate_ < 0)
@@ -509,12 +497,10 @@ NetworkCm02Action::~NetworkCm02Action() {}
 
 void NetworkCm02Action::updateRemainingLazy(double now)
 {
-  double delta = 0.0;
-
   if (suspended_ != 0)
     return;
 
-  delta = now - lastUpdate_;
+  double delta = now - lastUpdate_;
 
   if (remains_ > 0) {
     XBT_DEBUG("Updating action(%p): remains was %f, last_update was: %f", this, remains_, lastUpdate_);
@@ -526,14 +512,8 @@ void NetworkCm02Action::updateRemainingLazy(double now)
   if (maxDuration_ != NO_MAX_DURATION)
     double_update(&maxDuration_, delta, sg_surf_precision);
 
-  if (remains_ <= 0 &&
-      (lmm_get_variable_weight(getVariable()) > 0)) {
-    finish();
-    setState(Action::State::done);
-
-    heapRemove(getModel()->getActionHeap());
-  } else if (((maxDuration_ != NO_MAX_DURATION)
-      && (maxDuration_ <= 0))) {
+  if ((remains_ <= 0 && (lmm_get_variable_weight(getVariable()) > 0)) ||
+      (((maxDuration_ > NO_MAX_DURATION) && (maxDuration_ <= 0)))){
     finish();
     setState(Action::State::done);
     heapRemove(getModel()->getActionHeap());

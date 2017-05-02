@@ -2,7 +2,8 @@
 foreach(x actions-comm actions-storage app-masterworker app-pingpong app-pmm app-token-ring async-yield async-wait async-waitall 
           async-waitany cloud-capping cloud-masterworker cloud-migration cloud-simple cloud-two-tasks
           dht-chord dht-pastry energy-consumption energy-onoff energy-pstate energy-ptask energy-vm platform-failures 
-          io-file io-remote io-storage task-priority process-create process-kill process-migration process-suspend 
+          io-file io-remote io-storage task-priority 
+          plugin-hostload process-create process-daemon process-join process-kill process-migration process-suspend 
           platform-properties process-startkilltime synchro-semaphore trace-categories 
           trace-route-user-variables trace-link-user-variables trace-masterworker trace-platform 
           trace-process-migration trace-host-user-variables)
@@ -96,8 +97,8 @@ set(xml_files    ${xml_files}     ${CMAKE_CURRENT_SOURCE_DIR}/actions-comm/actio
 foreach(x actions-comm actions-storage app-bittorrent app-chainsend app-masterworker app-pingpong app-token-ring
           async-yield async-wait async-waitall async-waitany cloud-capping cloud-masterworker cloud-migration cloud-simple 
           cloud-two-tasks dht-chord dht-pastry dht-kademlia platform-failures io-file io-remote io-storage task-priority 
-          process-create process-kill process-migration process-suspend platform-properties synchro-semaphore 
-          process-startkilltime)
+          process-create process-daemon process-join process-kill process-migration process-startkilltime process-suspend
+	  platform-properties synchro-semaphore)
   ADD_TESH_FACTORIES(msg-${x} "thread;ucontext;raw;boost" --setenv bindir=${CMAKE_BINARY_DIR}/examples/msg/${x} --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/platforms --cd ${CMAKE_HOME_DIRECTORY}/examples/msg/${x} ${x}.tesh)
 endforeach()
 
@@ -115,6 +116,7 @@ ADD_TESH_FACTORIES(msg-dht-kademlia-parallel           "thread;ucontext;raw" --c
 ADD_TESH_FACTORIES(msg-energy-pstate-ptask             "thread;ucontext;raw;boost" --cfg host/model:ptask_L07 --log xbt_cfg.threshold:critical --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/msg --cd ${CMAKE_BINARY_DIR}/examples/msg ${CMAKE_HOME_DIRECTORY}/examples/msg/energy-pstate/energy-pstate.tesh)
 ADD_TESH_FACTORIES(msg-energy-consumption-ptask        "thread;ucontext;raw;boost" --cfg host/model:ptask_L07 --log xbt_cfg.threshold:critical --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/msg --cd ${CMAKE_BINARY_DIR}/examples/msg ${CMAKE_HOME_DIRECTORY}/examples/msg/energy-consumption/energy-consumption.tesh)
 ADD_TESH_FACTORIES(msg-energy-ptask                    "thread;ucontext;raw" --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/msg --cd ${CMAKE_BINARY_DIR}/examples/msg ${CMAKE_HOME_DIRECTORY}/examples/msg/energy-ptask/energy-ptask.tesh)
+ADD_TESH_FACTORIES(msg-plugin-hostload "thread;ucontext;raw;boost" --setenv bindir=${CMAKE_BINARY_DIR}/examples/msg --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/msg --cd ${CMAKE_HOME_DIRECTORY}/examples/msg/ ${CMAKE_HOME_DIRECTORY}/examples/msg/plugin-hostload/plugin-hostload.tesh)
 if(NOT WIN32)
   ADD_TESH_FACTORIES(msg-maestro-set                     "thread" --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/msg --cd ${CMAKE_BINARY_DIR}/examples/msg ${CMAKE_HOME_DIRECTORY}/examples/msg/maestro-set/maestro-set.tesh)
 else()

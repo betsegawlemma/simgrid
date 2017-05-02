@@ -16,7 +16,7 @@ SG_BEGIN_DECL()
 
 /* *************************** Network Zones ******************************** */
 #define msg_as_t msg_netzone_t /* portability macro */
-typedef simgrid_NetZone* msg_netzone_t;
+typedef s4u_NetZone* msg_netzone_t;
 
 /* ******************************** Host ************************************ */
 
@@ -60,14 +60,9 @@ typedef msg_host_t msg_vm_t;
 
 /* ******************************** File ************************************ */
 
-/** @brief Opaque object describing a File in MSG.
- *  @ingroup msg_file */
-typedef xbt_dictelm_t msg_file_t;
+typedef struct simdata_file* simdata_file_t;
 
-extern int MSG_FILE_LEVEL;
-typedef struct simdata_file *simdata_file_t;
-
-struct msg_file_priv  {
+typedef struct msg_file_priv {
   char *fullpath;
   sg_size_t size;
   char* mount_point;
@@ -77,14 +72,9 @@ struct msg_file_priv  {
   int desc_id;
   void *data;
   simdata_file_t simdata;
-};
+} s_msg_file_priv_t;
 
-typedef struct msg_file_priv s_msg_file_priv_t;
-typedef struct msg_file_priv* msg_file_priv_t;
-
-static inline msg_file_priv_t MSG_file_priv(msg_file_t file){
-  return (msg_file_priv_t )xbt_lib_get_level(file, MSG_FILE_LEVEL);
-}
+typedef struct msg_file_priv* msg_file_t;
 
 /* ******************************** Storage ************************************ */
 /* TODO: PV: to comment */
@@ -99,8 +89,10 @@ extern int MSG_STORAGE_LEVEL;
 typedef xbt_dictelm_t msg_storage_t;
 
 struct msg_storage_priv  {
-  const char *hostname;
-  void *data;
+  const char* name;
+  const char* hostname;
+  sg_size_t size;
+  void* data;
 };
 typedef struct msg_storage_priv  s_msg_storage_priv_t;
 typedef struct msg_storage_priv* msg_storage_priv_t;
@@ -134,7 +126,7 @@ typedef struct msg_comm *msg_comm_t;
     structure, but always use the provided API to interact with
     processes.
  */
-typedef smx_actor_t msg_process_t;
+typedef s4u_Actor* msg_process_t;
 
 /** @brief Return code of most MSG functions
     @ingroup msg_simulation
@@ -206,7 +198,6 @@ XBT_PUBLIC(msg_error_t) MSG_file_unlink(msg_file_t fd);
 XBT_PUBLIC(msg_error_t) MSG_file_seek(msg_file_t fd, sg_offset_t offset, int origin);
 XBT_PUBLIC(sg_size_t) MSG_file_tell (msg_file_t fd);
 XBT_PUBLIC(void) __MSG_file_get_info(msg_file_t fd);
-XBT_PUBLIC(void) __MSG_file_priv_free(msg_file_priv_t priv);
 XBT_PUBLIC(const char *) MSG_file_get_name(msg_file_t file);
 XBT_PUBLIC(msg_error_t) MSG_file_move(msg_file_t fd, const char* fullpath);
 XBT_PUBLIC(msg_error_t) MSG_file_rcopy(msg_file_t fd, msg_host_t host, const char* fullpath);
@@ -224,7 +215,6 @@ XBT_PUBLIC(msg_error_t) MSG_storage_set_data(msg_storage_t host, void *data);
 XBT_PUBLIC(void *) MSG_storage_get_data(msg_storage_t storage);
 XBT_PUBLIC(xbt_dict_t) MSG_storage_get_content(msg_storage_t storage);
 XBT_PUBLIC(sg_size_t) MSG_storage_get_size(msg_storage_t storage);
-XBT_PUBLIC(msg_error_t) MSG_storage_file_move(msg_file_t fd, msg_host_t dest, char* mount, char* fullname);
 XBT_PUBLIC(const char *) MSG_storage_get_host(msg_storage_t storage);
 
 /************************** Host handling ***********************************/
@@ -241,19 +231,17 @@ XBT_PUBLIC(void) MSG_host_off(msg_host_t host);
 XBT_PUBLIC(msg_host_t) MSG_host_self();
 XBT_PUBLIC(double) MSG_host_get_speed(msg_host_t h);
 XBT_PUBLIC(int) MSG_host_get_core_number(msg_host_t h);
-XBT_PUBLIC(xbt_swag_t) MSG_host_get_process_list(msg_host_t h);
+XBT_PUBLIC(void) MSG_host_get_process_list(msg_host_t h, xbt_dynar_t whereto);
 XBT_PUBLIC(int) MSG_host_is_on(msg_host_t h);
 XBT_PUBLIC(int) MSG_host_is_off(msg_host_t h);
 
-// deprecated
-XBT_PUBLIC(double) MSG_get_host_speed(msg_host_t h);
-
+XBT_PUBLIC(double) MSG_get_host_speed(msg_host_t h); /* deprecated */
 
 XBT_PUBLIC(double) MSG_host_get_power_peak_at(msg_host_t h, int pstate);
-XBT_PUBLIC(double) MSG_host_get_current_power_peak(msg_host_t h);
+#define MSG_host_get_current_power_peak(h) MSG_host_get_speed(h) /* deprecated */
 XBT_PUBLIC(int)    MSG_host_get_nb_pstates(msg_host_t h);
-#define MSG_host_get_pstate(h)         sg_host_get_pstate(h)
-#define MSG_host_set_pstate(h, pstate) sg_host_set_pstate(h, pstate)
+#define MSG_host_get_pstate(h)         sg_host_get_pstate(h)         /* deprecated */
+#define MSG_host_set_pstate(h, pstate) sg_host_set_pstate(h, pstate) /* deprecated */
 XBT_PUBLIC(xbt_dynar_t) MSG_hosts_as_dynar();
 XBT_PUBLIC(int) MSG_get_host_number();
 XBT_PUBLIC(xbt_dict_t) MSG_host_get_mounted_storage_list(msg_host_t host);
@@ -272,25 +260,14 @@ XBT_PUBLIC(void) MSG_create_environment(const char *file);
 XBT_PUBLIC(msg_process_t) MSG_process_create(const char *name,
                                            xbt_main_func_t code,
                                            void *data, msg_host_t host);
-XBT_PUBLIC(msg_process_t) MSG_process_create_with_arguments(const char *name,
-                                                          xbt_main_func_t
-                                                          code, void *data,
-                                                          msg_host_t host,
-                                                          int argc,
-                                                          char **argv);
-XBT_PUBLIC(msg_process_t) MSG_process_create_with_environment(const char
-                                                            *name,
-                                                            xbt_main_func_t
-                                                            code,
-                                                            void *data,
-                                                            msg_host_t host,
-                                                            int argc,
-                                                            char **argv,
-                                                            xbt_dict_t
-                                                            properties);
-XBT_PUBLIC(msg_process_t) MSG_process_attach(
-  const char *name, void *data,
-  msg_host_t host, xbt_dict_t properties);
+XBT_PUBLIC(msg_process_t)
+MSG_process_create_with_arguments(const char* name, xbt_main_func_t code, void* data, msg_host_t host, int argc,
+                                  char** argv);
+XBT_PUBLIC(msg_process_t)
+MSG_process_create_with_environment(const char* name, xbt_main_func_t code, void* data, msg_host_t host, int argc,
+                                    char** argv, xbt_dict_t properties);
+
+XBT_PUBLIC(msg_process_t) MSG_process_attach(const char* name, void* data, msg_host_t host, xbt_dict_t properties);
 XBT_PUBLIC(void) MSG_process_detach();
 
 XBT_PUBLIC(void) MSG_process_kill(msg_process_t process);
@@ -327,7 +304,10 @@ XBT_PUBLIC(int) MSG_process_is_suspended(msg_process_t process);
 XBT_PUBLIC(void) MSG_process_on_exit(int_f_pvoid_pvoid_t fun, void *data);
 XBT_PUBLIC(void) MSG_process_auto_restart_set(msg_process_t process, int auto_restart);
 
+XBT_PUBLIC(void) MSG_process_daemonize(msg_process_t process);
 XBT_PUBLIC(msg_process_t) MSG_process_restart(msg_process_t process);
+XBT_PUBLIC(void) MSG_process_ref(msg_process_t process);
+XBT_PUBLIC(void) MSG_process_unref(msg_process_t process);
 
 /************************** Task handling ************************************/
 XBT_PUBLIC(msg_task_t) MSG_task_create(const char *name,
@@ -511,4 +491,11 @@ XBT_PUBLIC(smx_context_t) MSG_process_get_smx_ctx(msg_process_t process);
 
 
 SG_END_DECL()
+
+#ifdef __cplusplus
+XBT_PUBLIC(msg_process_t)
+MSG_process_create_from_stdfunc(const char* name, std::function<void()> code, void* data, msg_host_t host,
+                                xbt_dict_t properties);
+#endif
+
 #endif

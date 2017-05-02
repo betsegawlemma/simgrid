@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, 2012-2015. The SimGrid Team.
+/* Copyright (c) 2010, 2012-2017. The SimGrid Team.
  * All rights reserved.                                                     */
 
 /* This program is free software; you can redistribute it and/or modify it
@@ -208,7 +208,7 @@ void TRACE_smpi_init(int rank)
 #endif
       PJ_container_new(str, INSTR_SMPI, father);
 #if HAVE_PAPI
-  papi_counter_t counters = smpi_process_papi_counters();
+  papi_counter_t counters = smpi_process()->papi_counters();
 
   for (auto& it : counters) {
     /**

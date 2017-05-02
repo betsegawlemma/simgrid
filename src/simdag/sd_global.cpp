@@ -1,12 +1,10 @@
-/* Copyright (c) 2006-2016. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2006-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "simdag_private.hpp"
-#include "simgrid/host.h"
-#include "simgrid/s4u/engine.hpp"
+#include "simgrid/s4u/Engine.hpp"
 #include "simgrid/sg_config.h"
 #include "src/include/instr/instr_interface.h"
 #include "src/surf/surf_interface.hpp"
@@ -224,13 +222,16 @@ void SD_create_environment(const char *platform_file)
  * \return a dynar of \ref SD_task_t whose state has changed.
  * \see SD_task_schedule(), SD_task_watch()
  */
+void SD_simulate(double how_long)
+{
+  simgrid::sd::simulate(how_long);
+}
 
-xbt_dynar_t SD_simulate(double how_long) {
+void SD_simulate_with_update(double how_long, xbt_dynar_t changed_tasks_dynar)
+{
   std::set<SD_task_t> *changed_tasks = simgrid::sd::simulate(how_long);
-  xbt_dynar_t changed_tasks_dynar = xbt_dynar_new(sizeof(SD_task_t), nullptr);
   for (const auto& task : *changed_tasks)
     xbt_dynar_push(changed_tasks_dynar, &task);
-  return changed_tasks_dynar;
 }
 
 /** @brief Returns the current clock, in seconds */

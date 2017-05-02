@@ -1,18 +1,15 @@
-/* Copyright (c) 2010-2016. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2010-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "xbt/asserts.h"
 #include "simgrid/jedule/jedule_sd_binding.h"
 
-#include "simgrid/forward.h"
-
-#include "../../simdag/simdag_private.hpp"
 #include "simgrid/jedule/jedule.hpp"
+#include "src/simdag/simdag_private.hpp"
+
+#include "simgrid/s4u/Engine.hpp"
 #include "simgrid/s4u/NetZone.hpp"
-#include "simgrid/s4u/engine.hpp"
 
 #if HAVE_JEDULE
 
@@ -33,7 +30,7 @@ void jedule_log_sd_event(SD_task_t task)
 
 void jedule_sd_init()
 {
-  NetZone_t root_comp = simgrid::s4u::Engine::instance()->netRoot();
+  sg_netzone_t root_comp = simgrid::s4u::Engine::instance()->netRoot();
   XBT_DEBUG("root name %s\n", root_comp->name());
 
   my_jedule = new simgrid::jedule::Jedule();

@@ -89,11 +89,11 @@ endif()
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 
 set(SIMGRID_VERSION_MAJOR "3")
-set(SIMGRID_VERSION_MINOR "15")
+set(SIMGRID_VERSION_MINOR "16")
 set(SIMGRID_VERSION_PATCH "0")
 set(SIMGRID_VERSION_EXTRA "-DEVEL") # Extra words to add to version string (e.g. -rc1)
 
-set(SIMGRID_VERSION_DATE  "2016") # Year for copyright information
+set(SIMGRID_VERSION_DATE  "2017") # Year for copyright information
 
 if(${SIMGRID_VERSION_PATCH} EQUAL "0")
   set(release_version "${SIMGRID_VERSION_MAJOR}.${SIMGRID_VERSION_MINOR}")
@@ -341,6 +341,14 @@ else()
   set(HAVE_THREAD_LOCAL_STORAGE 0)
 endif()
 
+CHECK_INCLUDE_FILE("sys/sendfile.h" HAVE_SENDFILE_H)
+CHECK_FUNCTION_EXISTS(sendfile HAVE_SENDFILE)
+if(HAVE_SENDFILE_H AND HAVE_SENDFILE)
+  set(HAVE_SENDFILE 1)
+else()
+  set(HAVE_SENDFILE 0)
+endif()
+
 if(enable_model-checking AND NOT "${CMAKE_SYSTEM}" MATCHES "Linux|FreeBSD")
   message(WARNING "Support for model-checking has not been enabled on ${CMAKE_SYSTEM}: disabling it")
   set(enable_model-checking FALSE)
@@ -396,7 +404,7 @@ endif()
 if(enable_model-checking)
   find_package(Libdw REQUIRED)
   find_package(Libevent REQUIRED)
-  include_directories(${LIBDW_INCLUDE_DIRS} ${LIBEVENT_INCLUDE_DIRS})
+  include_directories(${LIBDW_INCLUDE_DIR} ${LIBEVENT_INCLUDE_DIR})
   set(SIMGRID_DEP "${SIMGRID_DEP} ${LIBEVENT_LIBRARIES} ${LIBDW_LIBRARIES}")
   set(HAVE_MC 1)
   if("${CMAKE_SYSTEM}" MATCHES "FreeBSD" AND enable_java)
@@ -690,6 +698,7 @@ if(NS3_LIBRARY_PATH)
   set(CMAKE_SMPI_COMMAND "${CMAKE_SMPI_COMMAND}:${NS3_LIBRARY_PATH}")
 endif()
 set(CMAKE_SMPI_COMMAND "${CMAKE_SMPI_COMMAND}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}\"")
+set(SMPIMAIN smpimain)
 
 configure_file(${CMAKE_HOME_DIRECTORY}/include/smpi/mpif.h.in ${CMAKE_BINARY_DIR}/include/smpi/mpif.h @ONLY)
 foreach(script cc cxx ff f90 run)
@@ -707,6 +716,7 @@ if(NS3_LIBRARY_PATH)
   set(CMAKE_SMPI_COMMAND "${CMAKE_SMPI_COMMAND}:${NS3_LIBRARY_PATH}")
 endif()
 set(CMAKE_SMPI_COMMAND "${CMAKE_SMPI_COMMAND}:\${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}\"")
+set(SMPIMAIN ${CMAKE_BINARY_DIR}/bin/smpimain)
 
 foreach(script cc cxx ff f90 run)
   configure_file(${CMAKE_HOME_DIRECTORY}/src/smpi/smpi${script}.in ${CMAKE_BINARY_DIR}/smpi_script/bin/smpi${script} @ONLY)

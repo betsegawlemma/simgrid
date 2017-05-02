@@ -1,13 +1,16 @@
-/* Copyright (c) 2004-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "src/msg/msg_private.h"
+#include "src/surf/storage_interface.hpp"
 #include <numeric>
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(msg_io, msg, "Logging specific to MSG (io)");
+
+SG_BEGIN_DECL()
 
 /** @addtogroup msg_file
  * (#msg_file_t) and the functions for managing it.
@@ -18,16 +21,15 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(msg_io, msg, "Logging specific to MSG (io)");
 /********************************* File **************************************/
 void __MSG_file_get_info(msg_file_t fd){
 
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  xbt_dynar_t info = simcall_file_get_info(priv->simdata->smx_file);
+  xbt_dynar_t info = simcall_file_get_info(fd->simdata->smx_file);
   sg_size_t *psize;
 
-  priv->content_type = xbt_dynar_pop_as(info, char *);
-  priv->storage_type = xbt_dynar_pop_as(info, char *);
-  priv->storageId = xbt_dynar_pop_as(info, char *);
-  priv->mount_point = xbt_dynar_pop_as(info, char *);
-  psize = xbt_dynar_pop_as(info, sg_size_t*);
-  priv->size = *psize;
+  fd->content_type = xbt_dynar_pop_as(info, char*);
+  fd->storage_type = xbt_dynar_pop_as(info, char*);
+  fd->storageId    = xbt_dynar_pop_as(info, char*);
+  fd->mount_point  = xbt_dynar_pop_as(info, char*);
+  psize            = xbt_dynar_pop_as(info, sg_size_t*);
+  fd->size         = *psize;
   xbt_free(psize);
   xbt_dynar_free_container(&info);
 }
@@ -58,8 +60,7 @@ static void MSG_host_release_file_descriptor_id(msg_host_t host, int id)
  */
 msg_error_t MSG_file_set_data(msg_file_t fd, void *data)
 {
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  priv->data = data;
+  fd->data = data;
   return MSG_OK;
 }
 
@@ -71,8 +72,7 @@ msg_error_t MSG_file_set_data(msg_file_t fd, void *data)
  */
 void *MSG_file_get_data(msg_file_t fd)
 {
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  return priv->data;
+  return fd->data;
 }
 
 /** \ingroup msg_file
@@ -84,7 +84,6 @@ void MSG_file_dump (msg_file_t fd){
   /* Update the cached information first */
   __MSG_file_get_info(fd);
 
-  msg_file_priv_t priv = MSG_file_priv(fd);
   XBT_INFO("File Descriptor information:\n"
            "\t\tFull path: '%s'\n"
            "\t\tSize: %llu\n"
@@ -93,9 +92,7 @@ void MSG_file_dump (msg_file_t fd){
            "\t\tStorage Type: '%s'\n"
            "\t\tContent Type: '%s'\n"
            "\t\tFile Descriptor Id: %d",
-           priv->fullpath, priv->size, priv->mount_point,
-           priv->storageId, priv->storage_type,
-           priv->content_type, priv->desc_id);
+           fd->fullpath, fd->size, fd->mount_point, fd->storageId, fd->storage_type, fd->content_type, fd->desc_id);
 }
 
 /** \ingroup msg_file
@@ -107,17 +104,16 @@ void MSG_file_dump (msg_file_t fd){
  */
 sg_size_t MSG_file_read(msg_file_t fd, sg_size_t size)
 {
-  msg_file_priv_t file_priv = MSG_file_priv(fd);
   sg_size_t read_size;
 
-  if (file_priv->size == 0) /* Nothing to read, return */
+  if (fd->size == 0) /* Nothing to read, return */
     return 0;
 
   /* Find the host where the file is physically located and read it */
-  msg_storage_t storage_src = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, file_priv->storageId));
+  msg_storage_t storage_src           = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, fd->storageId));
   msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
-  msg_host_t attached_host = MSG_host_by_name(storage_priv_src->hostname);
-  read_size = simcall_file_read(file_priv->simdata->smx_file, size, attached_host);
+  msg_host_t attached_host            = MSG_host_by_name(storage_priv_src->hostname);
+  read_size                           = simcall_file_read(fd->simdata->smx_file, size, attached_host);
 
   if (strcmp(storage_priv_src->hostname, MSG_host_self()->cname())) {
     /* the file is hosted on a remote host, initiate a communication between src and dest hosts for data transfer */
@@ -156,15 +152,13 @@ sg_size_t MSG_file_read(msg_file_t fd, sg_size_t size)
  */
 sg_size_t MSG_file_write(msg_file_t fd, sg_size_t size)
 {
-  msg_file_priv_t file_priv = MSG_file_priv(fd);
-
   if (size == 0) /* Nothing to write, return */
     return 0;
 
   /* Find the host where the file is physically located (remote or local)*/
-  msg_storage_t storage_src = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, file_priv->storageId));
+  msg_storage_t storage_src           = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, fd->storageId));
   msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
-  msg_host_t attached_host = MSG_host_by_name(storage_priv_src->hostname);
+  msg_host_t attached_host            = MSG_host_by_name(storage_priv_src->hostname);
 
   if (strcmp(storage_priv_src->hostname, MSG_host_self()->cname())) {
     /* the file is hosted on a remote host, initiate a communication between src and dest hosts for data transfer */
@@ -192,9 +186,9 @@ sg_size_t MSG_file_write(msg_file_t fd, sg_size_t size)
     }
   }
   /* Write file on local or remote host */
-  sg_size_t offset = simcall_file_tell(file_priv->simdata->smx_file);
-  sg_size_t write_size = simcall_file_write(file_priv->simdata->smx_file, size, attached_host);
-  file_priv->size = offset+write_size;
+  sg_size_t offset     = simcall_file_tell(fd->simdata->smx_file);
+  sg_size_t write_size = simcall_file_write(fd->simdata->smx_file, size, attached_host);
+  fd->size             = offset + write_size;
 
   return write_size;
 }
@@ -209,20 +203,14 @@ sg_size_t MSG_file_write(msg_file_t fd, sg_size_t size)
  */
 msg_file_t MSG_file_open(const char* fullpath, void* data)
 {
-  char *name;
-  msg_file_priv_t priv = xbt_new(s_msg_file_priv_t, 1);
-  priv->data = data;
-  priv->fullpath = xbt_strdup(fullpath);
-  priv->simdata = xbt_new0(s_simdata_file_t,1);
-  priv->simdata->smx_file = simcall_file_open(fullpath, MSG_host_self());
-  priv->desc_id           = MSG_host_get_file_descriptor_id(MSG_host_self());
+  msg_file_t fd         = xbt_new(s_msg_file_priv_t, 1);
+  fd->data              = data;
+  fd->fullpath          = xbt_strdup(fullpath);
+  fd->simdata           = xbt_new0(s_simdata_file_t, 1);
+  fd->simdata->smx_file = simcall_file_open(fullpath, MSG_host_self());
+  fd->desc_id           = MSG_host_get_file_descriptor_id(MSG_host_self());
 
-  name = bprintf("%s:%s:%d", priv->fullpath, MSG_host_self()->cname(), priv->desc_id);
-
-  xbt_lib_set(file_lib, name, MSG_FILE_LEVEL, priv);
-  msg_file_t fd = static_cast<msg_file_t>(xbt_lib_get_elm_or_null(file_lib, name));
   __MSG_file_get_info(fd);
-  xbt_free(name);
 
   return fd;
 }
@@ -235,16 +223,13 @@ msg_file_t MSG_file_open(const char* fullpath, void* data)
  */
 int MSG_file_close(msg_file_t fd)
 {
-  char *name;
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  if (priv->data)
-    xbt_free(priv->data);
+  if (fd->data)
+    xbt_free(fd->data);
 
-  int res = simcall_file_close(priv->simdata->smx_file, MSG_host_self());
-  name    = bprintf("%s:%s:%d", priv->fullpath, MSG_host_self()->cname(), priv->desc_id);
-  MSG_host_release_file_descriptor_id(MSG_host_self(), priv->desc_id);
-  xbt_lib_unset(file_lib, name, MSG_FILE_LEVEL, 1);
-  xbt_free(name);
+  int res = simcall_file_close(fd->simdata->smx_file, MSG_host_self());
+  MSG_host_release_file_descriptor_id(MSG_host_self(), fd->desc_id);
+  __MSG_file_destroy(fd);
+
   return res;
 }
 
@@ -256,12 +241,12 @@ int MSG_file_close(msg_file_t fd)
  */
 msg_error_t MSG_file_unlink(msg_file_t fd)
 {
-  msg_file_priv_t file_priv = MSG_file_priv(fd);
   /* Find the host where the file is physically located (remote or local)*/
-  msg_storage_t storage_src = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, file_priv->storageId));
+  msg_storage_t storage_src           = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, fd->storageId));
   msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
-  msg_host_t attached_host = MSG_host_by_name(storage_priv_src->hostname);
-  int res = simcall_file_unlink(file_priv->simdata->smx_file, attached_host);
+  msg_host_t attached_host            = MSG_host_by_name(storage_priv_src->hostname);
+  int res                             = simcall_file_unlink(fd->simdata->smx_file, attached_host);
+  __MSG_file_destroy(fd);
   return static_cast<msg_error_t>(res);
 }
 
@@ -272,8 +257,7 @@ msg_error_t MSG_file_unlink(msg_file_t fd)
  * \return the size of the file (as a #sg_size_t)
  */
 sg_size_t MSG_file_get_size(msg_file_t fd){
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  return simcall_file_get_size(priv->simdata->smx_file);
+  return simcall_file_get_size(fd->simdata->smx_file);
 }
 
 /**
@@ -290,8 +274,7 @@ sg_size_t MSG_file_get_size(msg_file_t fd){
  */
 msg_error_t MSG_file_seek(msg_file_t fd, sg_offset_t offset, int origin)
 {
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  return static_cast<msg_error_t>(simcall_file_seek(priv->simdata->smx_file, offset, origin));
+  return static_cast<msg_error_t>(simcall_file_seek(fd->simdata->smx_file, offset, origin));
 }
 
 /**
@@ -304,14 +287,12 @@ msg_error_t MSG_file_seek(msg_file_t fd, sg_offset_t offset, int origin)
  */
 sg_size_t MSG_file_tell(msg_file_t fd)
 {
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  return simcall_file_tell(priv->simdata->smx_file);
+  return simcall_file_tell(fd->simdata->smx_file);
 }
 
 const char *MSG_file_get_name(msg_file_t fd) {
   xbt_assert((fd != nullptr), "Invalid parameters");
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  return priv->fullpath;
+  return fd->fullpath;
 }
 
 /**
@@ -321,8 +302,7 @@ const char *MSG_file_get_name(msg_file_t fd) {
  */
 msg_error_t MSG_file_move (msg_file_t fd, const char* fullpath)
 {
-  msg_file_priv_t priv = MSG_file_priv(fd);
-  return static_cast<msg_error_t>(simcall_file_move(priv->simdata->smx_file, fullpath));
+  return static_cast<msg_error_t>(simcall_file_move(fd->simdata->smx_file, fullpath));
 }
 
 /**
@@ -335,18 +315,15 @@ msg_error_t MSG_file_move (msg_file_t fd, const char* fullpath)
  */
 msg_error_t MSG_file_rcopy (msg_file_t file, msg_host_t host, const char* fullpath)
 {
-  msg_file_priv_t file_priv = MSG_file_priv(file);
-  sg_size_t read_size;
-
   /* Find the host where the file is physically located and read it */
-  msg_storage_t storage_src = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, file_priv->storageId));
+  msg_storage_t storage_src = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, file->storageId));
   msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
   msg_host_t attached_host = MSG_host_by_name(storage_priv_src->hostname);
   MSG_file_seek(file, 0, SEEK_SET);
-  read_size = simcall_file_read(file_priv->simdata->smx_file, file_priv->size, attached_host);
+  sg_size_t read_size = simcall_file_read(file->simdata->smx_file, file->size, attached_host);
 
   /* Find the real host destination where the file will be physically stored */
-  xbt_dict_cursor_t cursor = nullptr;
+  xbt_dict_cursor_t cursor   = nullptr;
   msg_storage_t storage_dest = nullptr;
   msg_host_t host_dest;
   size_t longest_prefix_length = 0;
@@ -428,7 +405,8 @@ msg_error_t MSG_file_rmove (msg_file_t file, msg_host_t host, const char* fullpa
 /**
  * \brief Destroys a file (internal call only)
  */
-void __MSG_file_destroy(msg_file_priv_t file) {
+void __MSG_file_destroy(msg_file_t file)
+{
   xbt_free(file->fullpath);
   xbt_free(file->simdata);
   xbt_free(file);
@@ -441,12 +419,14 @@ void __MSG_file_destroy(msg_file_priv_t file) {
 
 msg_storage_t __MSG_storage_create(smx_storage_t storage)
 {
-  const char *name = SIMIX_storage_get_name(storage);
-  const char *host = SIMIX_storage_get_host(storage);
   msg_storage_priv_t storage_private = xbt_new0(s_msg_storage_priv_t, 1);
-  storage_private->hostname = host;
-  xbt_lib_set(storage_lib,name,MSG_STORAGE_LEVEL,storage_private);
-  return xbt_lib_get_elm_or_null(storage_lib, name);
+
+  storage_private->name     = SIMIX_storage_get_name(storage);
+  storage_private->hostname = surf_storage_get_host(storage);
+  storage_private->size     = surf_storage_get_size(storage);
+
+  xbt_lib_set(storage_lib, storage_private->name, MSG_STORAGE_LEVEL, storage_private);
+  return xbt_lib_get_elm_or_null(storage_lib, storage_private->name);
 }
 
 /**
@@ -464,7 +444,8 @@ void __MSG_storage_destroy(msg_storage_priv_t storage) {
  */
 const char *MSG_storage_get_name(msg_storage_t storage) {
   xbt_assert((storage != nullptr), "Invalid parameters");
-  return SIMIX_storage_get_name(storage);
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  return priv->name;
 }
 
 /** \ingroup msg_storage_management
@@ -473,7 +454,7 @@ const char *MSG_storage_get_name(msg_storage_t storage) {
  * \return the free space size of the storage element (as a #sg_size_t)
  */
 sg_size_t MSG_storage_get_free_size(msg_storage_t storage){
-  return simcall_storage_get_free_size(storage);
+  return simgrid::simix::kernelImmediate([storage] { return surf_storage_resource_priv(storage)->getFreeSize(); });
 }
 
 /** \ingroup msg_storage_management
@@ -482,7 +463,7 @@ sg_size_t MSG_storage_get_free_size(msg_storage_t storage){
  * \return the used space size of the storage element (as a #sg_size_t)
  */
 sg_size_t MSG_storage_get_used_size(msg_storage_t storage){
-  return simcall_storage_get_used_size(storage);
+  return simgrid::simix::kernelImmediate([storage] { return surf_storage_resource_priv(storage)->getUsedSize(); });
 }
 
 /** \ingroup msg_storage_management
@@ -581,7 +562,14 @@ void *MSG_storage_get_data(msg_storage_t storage)
  */
 xbt_dict_t MSG_storage_get_content(msg_storage_t storage)
 {
-  return SIMIX_storage_get_content(storage);
+  std::map<std::string, sg_size_t*>* content =
+      simgrid::simix::kernelImmediate([storage] { return surf_storage_resource_priv(storage)->getContent(); });
+  xbt_dict_t content_dict = xbt_dict_new_homogeneous(nullptr);
+
+  for (auto entry : *content) {
+    xbt_dict_set(content_dict, entry.first.c_str(), entry.second, nullptr);
+  }
+  return content_dict;
 }
 
 /** \ingroup msg_storage_management
@@ -592,7 +580,8 @@ xbt_dict_t MSG_storage_get_content(msg_storage_t storage)
  */
 sg_size_t MSG_storage_get_size(msg_storage_t storage)
 {
-  return SIMIX_storage_get_size(storage);
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  return priv->size;
 }
 
 /** \ingroup msg_storage_management
@@ -606,3 +595,5 @@ const char *MSG_storage_get_host(msg_storage_t storage) {
   msg_storage_priv_t priv = MSG_storage_priv(storage);
   return priv->hostname;
 }
+
+SG_END_DECL()

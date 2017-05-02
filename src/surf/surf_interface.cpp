@@ -1,21 +1,17 @@
-/* Copyright (c) 2004-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "surf_interface.hpp"
-#include "cpu_interface.hpp"
 #include "mc/mc.h"
-#include "network_interface.hpp"
-#include "simgrid/s4u/engine.hpp"
+#include "simgrid/s4u/Engine.hpp"
 #include "simgrid/sg_config.h"
 #include "src/instr/instr_private.h" // TRACE_is_enabled(). FIXME: remove by subscribing tracing to the surf signals
-#include "src/internal_config.h"
 #include "src/kernel/routing/NetPoint.hpp"
-#include "src/simix/smx_host_private.h"
 #include "src/surf/HostImpl.hpp"
-#include "surf_private.h"
+
+#include <fstream>
 #include <vector>
 
 XBT_LOG_NEW_CATEGORY(surf, "All SURF categories");
@@ -25,15 +21,13 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_kernel, surf, "Logging specific to SURF (ke
  * Utils *
  *********/
 
-/* model_list_invoke contains only surf_host and surf_vm.
- * The callback functions of cpu_model and network_model will be called from those of these host models. */
 std::vector<surf_model_t> * all_existing_models = nullptr; /* to destroy models correctly */
-xbt_dynar_t model_list_invoke = nullptr;  /* to invoke callbacks */
 
 simgrid::trace_mgr::future_evt_set *future_evt_set = nullptr;
-xbt_dynar_t surf_path = nullptr;
+std::vector<std::string> surf_path;
 std::vector<simgrid::s4u::Host*> host_that_restart;
 xbt_dict_t watched_hosts_lib;
+extern std::map<std::string, storage_type_t> storage_types;
 
 namespace simgrid {
 namespace surf {
@@ -44,9 +38,11 @@ simgrid::xbt::signal<void(void)> surfExitCallbacks;
 }
 
 #include <simgrid/plugins/energy.h> // FIXME: this plugin should not be linked to the core
+#include <simgrid/plugins/load.h>   // FIXME: this plugin should not be linked to the core
 
 s_surf_model_description_t surf_plugin_description[] = {
     {"Energy", "Cpu energy consumption.", &sg_host_energy_plugin_init},
+    {"Load", "Cpu load.", &sg_host_load_plugin_init},
     {nullptr, nullptr, nullptr} /* this array must be nullptr terminated */
 };
 
@@ -128,10 +124,29 @@ double surf_get_clock()
 # define FILE_DELIM "/"         /* FIXME: move to better location */
 #endif
 
+std::ifstream* surf_ifsopen(const char* name)
+{
+  std::ifstream* fs = new std::ifstream();
+  xbt_assert(name);
+  if (__surf_is_absolute_file_path(name)) { /* don't mess with absolute file names */
+    fs->open(name, std::ifstream::in);
+  }
+
+  /* search relative files in the path */
+  for (auto path_elm : surf_path) {
+    std::string buff = path_elm + FILE_DELIM + name;
+    fs->open(buff.c_str(), std::ifstream::in);
+
+    if (!fs->fail()) {
+      XBT_DEBUG("Found file at %s", buff.c_str());
+      return fs;
+    }
+  }
+
+  return fs;
+}
 FILE *surf_fopen(const char *name, const char *mode)
 {
-  unsigned int cpt;
-  char *path_elm = nullptr;
   char *buff;
   FILE *file = nullptr;
 
@@ -141,8 +156,8 @@ FILE *surf_fopen(const char *name, const char *mode)
     return fopen(name, mode);
 
   /* search relative files in the path */
-  xbt_dynar_foreach(surf_path, cpt, path_elm) {
-    buff = bprintf("%s" FILE_DELIM "%s", path_elm, name);
+  for (auto path_elm : surf_path) {
+    buff = bprintf("%s" FILE_DELIM "%s", path_elm.c_str(), name);
     file = fopen(buff, mode);
     free(buff);
 
@@ -333,8 +348,6 @@ void surf_init(int *argc, char **argv)
   USER_HOST_LEVEL = simgrid::s4u::Host::extension_create(nullptr);
 
   storage_lib = xbt_lib_new();
-  storage_type_lib = xbt_lib_new();
-  file_lib = xbt_lib_new();
   watched_hosts_lib = xbt_dict_new_homogeneous(nullptr);
 
   XBT_DEBUG("Add SURF levels");
@@ -343,13 +356,11 @@ void surf_init(int *argc, char **argv)
   xbt_init(argc, argv);
   if (!all_existing_models)
     all_existing_models = new std::vector<simgrid::surf::Model*>();
-  if (!model_list_invoke)
-    model_list_invoke = xbt_dynar_new(sizeof(simgrid::surf::Model*), nullptr);
   if (!future_evt_set)
     future_evt_set = new simgrid::trace_mgr::future_evt_set();
 
-  TRACE_add_start_function(TRACE_surf_alloc);
-  TRACE_add_end_function(TRACE_surf_release);
+  TRACE_surf_alloc();
+  simgrid::surf::surfExitCallbacks.connect(TRACE_surf_release);
 
   sg_config_init(argc, argv);
 
@@ -361,19 +372,24 @@ void surf_exit()
 {
   TRACE_end();                  /* Just in case it was not called by the upper layer (or there is no upper layer) */
 
-  xbt_dynar_free(&surf_path);
-
   sg_host_exit();
   xbt_lib_free(&storage_lib);
   sg_link_exit();
-  xbt_lib_free(&storage_type_lib);
-  xbt_lib_free(&file_lib);
   xbt_dict_free(&watched_hosts_lib);
+  for (auto e : storage_types) {
+    storage_type_t stype = e.second;
+    free(stype->model);
+    free(stype->type_id);
+    free(stype->content);
+    free(stype->content_type);
+    xbt_dict_free(&(stype->properties));
+    delete stype->model_properties;
+    free(stype);
+  }
 
   for (auto model : *all_existing_models)
     delete model;
   delete all_existing_models;
-  xbt_dynar_free(&model_list_invoke);
 
   simgrid::surf::surfExitCallbacks();
 
@@ -441,7 +457,7 @@ double Model::nextOccuringEventLazy(double now)
   while(!modifiedSet_->empty()) {
     Action *action = &(modifiedSet_->front());
     modifiedSet_->pop_front();
-    int max_dur_flag = 0;
+    bool max_dur_flag = false;
 
     if (action->getStateSet() != runningActionSet_)
       continue;
@@ -465,13 +481,11 @@ double Model::nextOccuringEventLazy(double now)
       min = now + time_to_completion; // when the task will complete if nothing changes
     }
 
-    if ((action->getMaxDuration() != NO_MAX_DURATION)
-        && (min == -1
-            || action->getStartTime() +
-            action->getMaxDuration() < min)) {
-      min = action->getStartTime() +
-          action->getMaxDuration();  // when the task will complete anyway because of the deadline if any
-      max_dur_flag = 1;
+    if ((action->getMaxDuration() > NO_MAX_DURATION) &&
+        (min == -1 || action->getStartTime() + action->getMaxDuration() < min)) {
+      // when the task will complete anyway because of the deadline if any
+      min          = action->getStartTime() + action->getMaxDuration();
+      max_dur_flag = true;
     }
 
 
@@ -483,9 +497,9 @@ double Model::nextOccuringEventLazy(double now)
 
     if (min != -1) {
       action->heapUpdate(actionHeap_, min, max_dur_flag ? MAX_DURATION : NORMAL);
-      XBT_DEBUG("Insert at heap action(%p) min %f now %f", action, min,
-                now);
-    } else DIE_IMPOSSIBLE;
+      XBT_DEBUG("Insert at heap action(%p) min %f now %f", action, min, now);
+    } else
+      DIE_IMPOSSIBLE;
   }
 
   //hereafter must have already the min value for this resource model
@@ -693,7 +707,7 @@ void Action::setBound(double bound)
   if (variable_)
     lmm_update_variable_bound(getModel()->getMaxminSystem(), variable_, bound);
 
-  if (getModel()->getUpdateMechanism() == UM_LAZY && getLastUpdate()!=surf_get_clock())
+  if (getModel()->getUpdateMechanism() == UM_LAZY && getLastUpdate() != surf_get_clock())
     heapRemove(getModel()->getActionHeap());
   XBT_OUT();
 }
@@ -706,7 +720,7 @@ double Action::getStartTime()
 double Action::getFinishTime()
 {
   /* keep the function behavior, some models (cpu_ti) change the finish time before the action end */
-  return remains_ == 0 ? finishTime_ : -1;
+  return remains_ <= 0 ? finishTime_ : -1;
 }
 
 void Action::setData(void* data)

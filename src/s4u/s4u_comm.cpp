@@ -1,5 +1,4 @@
-/* Copyright (c) 2006-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2006-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -7,9 +6,8 @@
 #include "xbt/log.h"
 #include "src/msg/msg_private.h"
 
-#include "simgrid/s4u/comm.hpp"
-#include <simgrid/s4u/Mailbox.hpp>
-
+#include "simgrid/s4u/Comm.hpp"
+#include "simgrid/s4u/Mailbox.hpp"
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(s4u_comm,s4u_activity,"S4U asynchronous communications");
 
@@ -147,7 +145,7 @@ s4u::Comm &Comm::send_async(MailboxPtr dest, void *data, int simulatedSize) {
 
 s4u::Comm &Comm::recv_async(MailboxPtr dest, void **data) {
   s4u::Comm &res = s4u::Comm::recv_init(dest);
-  res.setDstData(data);
+  res.setDstData(data, sizeof(*data));
   res.start();
   return res;
 }

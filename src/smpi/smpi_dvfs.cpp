@@ -1,5 +1,4 @@
-/* Copyright (c) 2013-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2013-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -7,9 +6,9 @@
 #include <xbt/log.h>
 
 // FIXME: this plugin should be separated from the core
+#include "simgrid/s4u/Host.hpp"
 #include <simgrid/plugins/energy.h>
 #include <simgrid/simix.h>
-#include <simgrid/s4u/host.hpp>
 
 #include <smpi/smpi.h>
 
@@ -35,7 +34,7 @@ double smpi_get_host_power_peak_at(int pstate_index)
  */
 double smpi_get_host_current_power_peak()
 {
-  return SIMIX_host_self()->getPstateSpeedCurrent();
+  return SIMIX_host_self()->speed();
 }
 
 /**
@@ -73,10 +72,8 @@ double smpi_get_host_consumed_energy() {
 
 #if defined(__alpha__) || defined(__sparc64__) || defined(__x86_64__) || defined(__ia64__)
 typedef int integer;
-typedef unsigned int uinteger;
 #else
 typedef long int integer;
-typedef unsigned long int uinteger;
 #endif
 typedef char *address;
 typedef short int shortint;

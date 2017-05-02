@@ -22,7 +22,7 @@ SG_BEGIN_DECL()
     A link is a network node represented as a <em>name</em>, a <em>bandwidth</em> and a <em>latency</em>.
     A route is a list of links between two hosts.
  */
-typedef Link *SD_link_t;
+typedef sg_link_t SD_link_t;
 
 /** @brief Task opaque datatype
     @ingroup SD_task_api
@@ -143,7 +143,8 @@ XBT_PUBLIC(int) SD_task_dependency_exists(SD_task_t src, SD_task_t dst);
 XBT_PUBLIC(void) SD_init(int *argc, char **argv);
 XBT_PUBLIC(void) SD_config(const char *key, const char *value);
 XBT_PUBLIC(void) SD_create_environment(const char *platform_file);
-XBT_PUBLIC(xbt_dynar_t) SD_simulate(double how_long);
+XBT_PUBLIC(void) SD_simulate(double how_long);
+XBT_PUBLIC(void) SD_simulate_with_update(double how_long, xbt_dynar_t changed_tasks_dynar);
 XBT_PUBLIC(double) SD_get_clock();
 XBT_PUBLIC(void) SD_exit();
 XBT_PUBLIC(xbt_dynar_t) SD_daxload(const char *filename);

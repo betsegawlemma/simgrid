@@ -46,16 +46,12 @@ void CpuModel::updateActionsStateLazy(double now, double /*delta*/)
     //without losing the event ascending order (considering all CPU's)
     double smaller = -1;
     ActionList *actionSet = getRunningActionSet();
-    for(ActionList::iterator it(actionSet->begin()), itend(actionSet->end())
-       ; it != itend ; ++it) {
+    ActionList::iterator it(actionSet->begin());
+    ActionList::iterator itend(actionSet->end());
+    for (; it != itend; ++it) {
       CpuAction *action = static_cast<CpuAction*>(&*it);
-        if (smaller < 0) {
-          smaller = action->getLastUpdate();
-          continue;
-        }
-        if (action->getLastUpdate() < smaller) {
-          smaller = action->getLastUpdate();
-        }
+      if (smaller < 0 || action->getLastUpdate() < smaller)
+        smaller = action->getLastUpdate();
     }
     if (smaller > 0) {
       TRACE_last_timestamp_to_dump = smaller;
@@ -67,9 +63,10 @@ void CpuModel::updateActionsStateFull(double now, double delta)
 {
   CpuAction *action = nullptr;
   ActionList *running_actions = getRunningActionSet();
-
-  for(ActionList::iterator it(running_actions->begin()), itNext=it, itend(running_actions->end())
-     ; it != itend ; it=itNext) {
+  ActionList::iterator it(running_actions->begin());
+  ActionList::iterator itNext = it;
+  ActionList::iterator itend(running_actions->end());
+  for (; it != itend; it = itNext) {
     ++itNext;
     action = static_cast<CpuAction*>(&*it);
     if (TRACE_is_enabled()) {
@@ -82,17 +79,11 @@ void CpuModel::updateActionsStateFull(double now, double delta)
 
     action->updateRemains(lmm_variable_getvalue(action->getVariable()) * delta);
 
-
     if (action->getMaxDuration() != NO_MAX_DURATION)
       action->updateMaxDuration(delta);
 
-
-    if ((action->getRemainsNoUpdate() <= 0) &&
-        (lmm_get_variable_weight(action->getVariable()) > 0)) {
-      action->finish();
-      action->setState(Action::State::done);
-    } else if ((action->getMaxDuration() != NO_MAX_DURATION) &&
-               (action->getMaxDuration() <= 0)) {
+    if (((action->getRemainsNoUpdate() <= 0) && (lmm_get_variable_weight(action->getVariable()) > 0)) ||
+        ((action->getMaxDuration() != NO_MAX_DURATION) && (action->getMaxDuration() <= 0))) {
       action->finish();
       action->setState(Action::State::done);
     }
@@ -127,12 +118,6 @@ Cpu::Cpu(Model* model, simgrid::s4u::Host* host, lmm_constraint_t constraint, st
 }
 
 Cpu::~Cpu() = default;
-
-/** @brief The amount of flop per second that this CPU can compute at its current DVFS level */
-double Cpu::getPstateSpeedCurrent()
-{
-  return speed_.peak;
-}
 
 int Cpu::getNbPStates()
 {

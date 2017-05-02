@@ -1,11 +1,10 @@
-/* Copyright (c) 2004-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _SURF_SURF_H
-#define _SURF_SURF_H
+#ifndef SURF_SURF_H
+#define SURF_SURF_H
 
 #include "xbt/swag.h"
 #include "xbt/dynar.h"
@@ -31,7 +30,6 @@ extern XBT_PRIVATE double sg_latency_factor;
 extern XBT_PRIVATE double sg_bandwidth_factor;
 extern XBT_PRIVATE double sg_weight_S_parameter;
 extern XBT_PRIVATE int sg_network_crosstraffic;
-extern XBT_PRIVATE xbt_dynar_t surf_path;
 
 #ifdef __cplusplus
 
@@ -44,44 +42,34 @@ class HostModel;
 class NetworkModel;
 class StorageModel;
 class Resource;
-class ResourceLmm;
-class HostCLM03;
 class NetworkCm02Link;
 class Action;
-class ActionLmm;
-class StorageActionLmm;
 }
 }
 
 typedef simgrid::surf::Model surf_Model;
 typedef simgrid::surf::CpuModel surf_CpuModel;
+typedef simgrid::surf::Cpu surf_Cpu;
 typedef simgrid::surf::HostModel surf_HostModel;
 typedef simgrid::surf::NetworkModel surf_NetworkModel;
+typedef simgrid::surf::Storage surf_Storage;
 typedef simgrid::surf::StorageModel surf_StorageModel;
 typedef simgrid::surf::Resource surf_Resource;
-typedef simgrid::surf::ResourceLmm surf_ResourceLmm;
 typedef simgrid::surf::HostImpl surf_Host;
-typedef simgrid::surf::HostCLM03 surf_HostCLM03;
-typedef simgrid::surf::NetworkCm02Link surf_NetworkCm02Link;
 typedef simgrid::surf::Action surf_Action;
-typedef simgrid::surf::ActionLmm surf_ActionLmm;
-typedef simgrid::surf::StorageActionLmm surf_StorageActionLmm;
 
 #else
 
 typedef struct surf_Model surf_Model;
 typedef struct surf_CpuModel surf_CpuModel;
+typedef struct surf_Cpu surf_Cpu;
 typedef struct surf_HostModel surf_HostModel;
 typedef struct surf_NetworkModel surf_NetworkModel;
+typedef struct surf_Storage surf_Storage;
 typedef struct surf_StorageModel surf_StorageModel;
 typedef struct surf_Resource surf_Resource;
-typedef struct surf_ResourceLmm surf_ResourceLmm;
-typedef struct surf_HostCLM03 surf_HostCLM03;
 typedef struct surf_Host surf_Host;
-typedef struct surf_NetworkCm02Link surf_NetworkCm02Link;
 typedef struct surf_Action surf_Action;
-typedef struct surf_ActionLmm surf_ActionLmm;
-typedef struct surf_StorageActionLmm surf_StorageActionLmm;
 
 #endif
 
@@ -96,11 +84,9 @@ typedef surf_CpuModel *surf_cpu_model_t;
 typedef surf_HostModel *surf_host_model_t;
 typedef surf_NetworkModel *surf_network_model_t;
 typedef surf_StorageModel *surf_storage_model_t;
+typedef surf_Storage* surf_storage_t;
 
 typedef xbt_dictelm_t surf_resource_t;
-typedef surf_Resource *surf_cpp_resource_t;
-typedef surf_Host *surf_host_t;
-typedef surf_Cpu *surf_cpu_t;
 
 /** @ingroup SURF_c_bindings
  *  \brief Action structure
@@ -131,8 +117,9 @@ XBT_PUBLIC(void) model_help(const char *category, s_surf_model_description_t * t
 /* Generic model object */
 /***************************/
 
-static inline void *surf_storage_resource_priv(const void *storage){
-  return (void*)xbt_lib_get_level((xbt_dictelm_t)storage, SURF_STORAGE_LEVEL);
+static inline surf_storage_t surf_storage_resource_priv(const void* storage)
+{
+  return (surf_storage_t)xbt_lib_get_level((xbt_dictelm_t)storage, SURF_STORAGE_LEVEL);
 }
 
 static inline void *surf_storage_resource_by_name(const char *name){
@@ -265,14 +252,6 @@ XBT_PUBLIC(int) surf_host_file_move(sg_host_t host, surf_file_t fd, const char* 
  * @return MSG_OK if successful, otherwise MSG_TASK_CANCELED
  */
 XBT_PUBLIC(int) surf_host_file_seek(sg_host_t host, surf_file_t fd, sg_offset_t offset, int origin);
-
-/**
- * @brief Get the content of a storage
- *
- * @param resource The surf storage
- * @return A xbt_dict_t with path as keys and size in bytes as values
- */
-XBT_PUBLIC(xbt_dict_t) surf_storage_get_content(surf_resource_t resource);
 
 /**
  * @brief Get the size in bytes of a storage
@@ -624,8 +603,6 @@ XBT_PUBLIC(void) surf_exit();
 
 /* Prototypes of the functions that handle the properties */
 XBT_PUBLIC_DATA(xbt_dict_t) current_property_set;// the prop set for the currently parsed element (also used in SIMIX)
-/* The same for model_prop set*/
-XBT_PUBLIC_DATA(xbt_dict_t) current_model_property_set;
 
 /* surf parse file related (public because called from a test suite) */
 XBT_PUBLIC(void) parse_platform_file(const char *file);
@@ -656,4 +633,5 @@ xbt_graph_t instr_routing_platform_graph ();
 void instr_routing_platform_graph_export_graphviz (xbt_graph_t g, const char *filename);
 
 SG_END_DECL()
-#endif                          /* _SURF_SURF_H */
+
+#endif

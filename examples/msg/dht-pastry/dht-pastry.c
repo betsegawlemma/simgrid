@@ -41,14 +41,16 @@ typedef struct s_node {
   int ready;
   msg_comm_t comm_receive;                // current communication to receive
   xbt_dynar_t pending_tasks;
-} s_node_t, *node_t;
+} s_node_t;
+typedef s_node_t* node_t;
 
 typedef struct s_state {
   int id;
   int namespace_set[NAMESPACE_SIZE];
   int neighborhood_set[NEIGHBORHOOD_SIZE];
   int routing_table[LEVELS_COUNT][LEVEL_SIZE];
-} s_state_t, *state_t;
+} s_state_t;
+typedef s_state_t* state_t;
 
 /** Types of tasks exchanged between nodes. */
 typedef enum {
@@ -67,9 +69,9 @@ typedef struct s_task_data {
   //const char* issuer_host_name;           // used for logging
   int steps;
   state_t state;
-} s_task_data_t, *task_data_t;
+} s_task_data_t;
+typedef s_task_data_t* task_data_t;
 
-static void get_mailbox(int node_id, char* mailbox);
 static int domain(unsigned int a, unsigned int level);
 static int shl(int a, int b);
 static int closest_in_namespace_set(node_t node, int dest);
@@ -399,19 +401,21 @@ static void handle_task(node_t node, msg_task_t task) {
         if (min<0 || max>=NAMESPACE_SIZE) {
          node->namespace_set[i] = curr_namespace_set[j];
          j++;
-        } else if (curr_namespace_set[j] == -1) {
-          node->namespace_set[i] = task_namespace_set[max];
-          max++;
-        } else if (curr_namespace_set[j] == task_namespace_set[max]) {
-          node->namespace_set[i] = curr_namespace_set[j];
-          j++;
-          max++;
-        } else if (curr_namespace_set[j] < task_namespace_set[max]) {
-          node->namespace_set[i] = curr_namespace_set[j];
-          j++;
-        } else {
-          node->namespace_set[i] = task_namespace_set[max];
-          max++;
+        } else if (max >= 0){
+          if (curr_namespace_set[j] == -1) {
+            node->namespace_set[i] = task_namespace_set[max];
+            max++;
+          } else if (curr_namespace_set[j] == task_namespace_set[max]) {
+            node->namespace_set[i] = curr_namespace_set[j];
+            j++;
+            max++;
+          } else if (curr_namespace_set[j] < task_namespace_set[max]) {
+            node->namespace_set[i] = curr_namespace_set[j];
+            j++;
+          } else {
+            node->namespace_set[i] = task_namespace_set[max];
+            max++;
+          }
         }
       }
 

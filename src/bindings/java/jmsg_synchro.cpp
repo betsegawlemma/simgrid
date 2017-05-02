@@ -1,7 +1,6 @@
-/* Functions exporting the simgrid synchronization mechanisms to the Java world */
+/* Java bindings of the Synchronization API.                                */
 
-/* Copyright (c) 2012-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2012-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -13,7 +12,9 @@
 #include "jxbt_utilities.h"
 #include "xbt/synchro.h"
 
-XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(jmsg);
+XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(java);
+
+SG_BEGIN_DECL()
 
 static jfieldID jsynchro_field_Mutex_bind;
 
@@ -94,3 +95,5 @@ JNIEXPORT void JNICALL Java_org_simgrid_msg_Semaphore_nativeFinalize(JNIEnv * en
   sem = (msg_sem_t)(uintptr_t)env->GetLongField(obj, jsynchro_field_Semaphore_bind);
   MSG_sem_destroy(sem);
 }
+
+SG_END_DECL()

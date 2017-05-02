@@ -6,10 +6,13 @@
 #ifndef S4U_LINK_HPP_
 #define S4U_LINK_HPP_
 
+#include <simgrid/link.h>
 #include <xbt/base.h>
+#include <xbt/signal.hpp>
 
 #include <unordered_map>
 
+<<<<<<< HEAD
 #include "xbt/dict.h"
 
 #include "xbt/Extendable.hpp"
@@ -18,6 +21,8 @@
 
 #include "simgrid/link.h"
 
+=======
+>>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
 /***********
  * Classes *
  ***********/
@@ -31,11 +36,15 @@ namespace xbt {
 };
 namespace s4u {
 /** @brief A Link represents the network facilities between [hosts](\ref simgrid::s4u::Host) */
+<<<<<<< HEAD
 XBT_PUBLIC_CLASS Link : public simgrid::xbt::Extendable<Link>  {
 
+=======
+XBT_PUBLIC_CLASS Link
+{
+>>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
   friend simgrid::surf::LinkImpl;
 
-private:
   // Links are created from the NetZone, and destroyed by their private implementation when the simulation ends
   explicit Link(surf::LinkImpl* pimpl) : pimpl_(pimpl) {}
   virtual ~Link() = default;

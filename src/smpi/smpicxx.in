@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Copyright (c) 2014-2015. The SimGrid Team.
+# Copyright (c) 2014-2017. The SimGrid Team.
 # All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify it
@@ -19,8 +19,9 @@ CMAKE_LINKARGS="-L@libdir@"
 list_set CXXFLAGS
 list_set LINKARGS
 if [ "@WIN32@" != "1" ]; then
-    list_add CXXFLAGS "-Dmain=smpi_simulated_main_"
-    list_add LINKARGS "-lsimgrid"
+    # list_add CXXFLAGS "-Dmain=smpi_simulated_main_"
+    list_add CXXFLAGS "-fpic"
+    list_add LINKARGS "-shared" "-lsimgrid"
 else
     list_add CXXFLAGS "-include" "@includedir@/smpi/smpi_main.h"
     list_add LINKARGS "@libdir@\libsimgrid.dll"

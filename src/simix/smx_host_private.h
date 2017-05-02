@@ -1,11 +1,10 @@
-/* Copyright (c) 2007-2010, 2012-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _SIMIX_HOST_PRIVATE_H
-#define _SIMIX_HOST_PRIVATE_H
+#ifndef SIMIX_HOST_PRIVATE_H
+#define SIMIX_HOST_PRIVATE_H
 
 #include <vector>
 #include <functional>
@@ -38,7 +37,6 @@ namespace simgrid {
     };
   }
 }
-typedef simgrid::simix::Host s_smx_host_priv_t;
 
 SG_BEGIN_DECL()
 XBT_PRIVATE void SIMIX_host_add_auto_restart_process(sg_host_t host,

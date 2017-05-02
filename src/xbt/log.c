@@ -41,7 +41,9 @@ typedef struct {
   e_xbt_log_priority_t thresh;
   int additivity;
   xbt_log_appender_t appender;
-} s_xbt_log_setting_t, *xbt_log_setting_t;
+} s_xbt_log_setting_t;
+
+typedef s_xbt_log_setting_t* xbt_log_setting_t;
 
 static xbt_dynar_t xbt_log_settings = NULL;
 
@@ -109,7 +111,6 @@ static void xbt_log_connect_categories(void)
   XBT_LOG_CONNECT(xbt_ex);
   XBT_LOG_CONNECT(xbt_backtrace);
   XBT_LOG_CONNECT(xbt_exception);
-  XBT_LOG_CONNECT(xbt_fifo);
   XBT_LOG_CONNECT(xbt_graph);
   XBT_LOG_CONNECT(xbt_heap);
   XBT_LOG_CONNECT(xbt_lib);

@@ -1,26 +1,25 @@
-/* Copyright (c) 2015. The SimGrid Team. All rights reserved.               */
+/* Copyright (c) 2015-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "xbt/log.h"
+#include "simgrid/simix.h"
 #include "src/msg/msg_private.h"
+#include "xbt/log.h"
 
 #include "simgrid/s4u/Actor.hpp"
-#include "simgrid/s4u/comm.hpp"
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Comm.hpp"
+#include "simgrid/s4u/File.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "simgrid/s4u/Mailbox.hpp"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_file,"S4U files");
 
-#include "simgrid/s4u/file.hpp"
-#include "simgrid/s4u/host.hpp"
-#include "simgrid/simix.h"
 
 namespace simgrid {
 namespace s4u {
 
-File::File(const char* fullpath, void* userdata) : path_(fullpath)
+File::File(const char* fullpath, void* userdata) : path_(fullpath), userdata_(userdata)
 {
   // this cannot fail because we get a xbt_die if the mountpoint does not exist
   pimpl_ = simcall_file_open(fullpath, Host::current());

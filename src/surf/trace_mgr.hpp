@@ -1,11 +1,10 @@
-/* Copyright (c) 2004-2007, 2009-2014. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _SURF_TMGR_H
-#define _SURF_TMGR_H
+#ifndef SURF_TMGR_H
+#define SURF_TMGR_H
 
 #include "xbt/heap.h"
 #include "simgrid/forward.h"
@@ -41,8 +40,8 @@ XBT_PUBLIC(void) tmgr_trace_event_unref(tmgr_trace_iterator_t *trace_event);
 
 XBT_PUBLIC(void) tmgr_finalize(void);
 
-XBT_PUBLIC(tmgr_trace_t) tmgr_trace_new_from_file(const char *filename);
-XBT_PUBLIC(tmgr_trace_t) tmgr_trace_new_from_string(const char *id, const char *input, double periodicity);
+XBT_PUBLIC(tmgr_trace_t) tmgr_trace_new_from_file(const char* filename);
+XBT_PUBLIC(tmgr_trace_t) tmgr_trace_new_from_string(const char* id, std::string input, double periodicity);
 
 SG_END_DECL()
 
@@ -94,4 +93,4 @@ private:
 }} // namespace simgrid::trace_mgr
 #endif /* C++ only */
 
-#endif                          /* _SURF_TMGR_H */
+#endif /* SURF_TMGR_H */

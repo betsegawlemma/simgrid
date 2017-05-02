@@ -101,7 +101,7 @@ VirtualMachineImpl::VirtualMachineImpl(simgrid::s4u::VirtualMachine* piface, sim
   allVms_.push_back(piface);
 
   /* We create cpu_action corresponding to a VM process on the host operating system. */
-  /* FIXME: TODO: we have to periodically input GUESTOS_NOISE to the system? how ? */
+  /* TODO: we have to periodically input GUESTOS_NOISE to the system? how ? */
   action_ = host_PM->pimpl_cpu->execution_start(0);
 
   /* Initialize the VM parameters */
@@ -116,7 +116,10 @@ extern "C" int
 VirtualMachineImpl::~VirtualMachineImpl()
 {
   onVmDestruction(this);
-  allVms_.erase(find(allVms_.begin(), allVms_.end(), piface_));
+  /* I was already removed from the allVms set if the VM was destroyed cleanly */
+  auto iter = find(allVms_.begin(), allVms_.end(), piface_);
+  if (iter != allVms_.end())
+    allVms_.erase(iter);
 
   /* dirty page tracking */
   unsigned int size          = xbt_dict_size(dp_objs);
@@ -163,7 +166,8 @@ void VirtualMachineImpl::suspend(smx_actor_t issuer)
 
   action_->suspend();
 
-  smx_actor_t smx_process, smx_process_safe;
+  smx_actor_t smx_process;
+  smx_actor_t smx_process_safe;
   xbt_swag_foreach_safe(smx_process, smx_process_safe, process_list) {
     XBT_DEBUG("suspend %s", smx_process->name.c_str());
     SIMIX_process_suspend(smx_process, issuer);
@@ -184,7 +188,8 @@ void VirtualMachineImpl::resume()
 
   action_->resume();
 
-  smx_actor_t smx_process, smx_process_safe;
+  smx_actor_t smx_process;
+  smx_actor_t smx_process_safe;
   xbt_swag_foreach_safe(smx_process, smx_process_safe, process_list) {
     XBT_DEBUG("resume %s", smx_process->cname());
     SIMIX_process_resume(smx_process);
@@ -208,13 +213,14 @@ void VirtualMachineImpl::shutdown(smx_actor_t issuer)
   xbt_swag_t process_list = piface_->extension<simgrid::simix::Host>()->process_list;
   XBT_DEBUG("shutdown VM %s, that contains %d processes", piface_->cname(), xbt_swag_size(process_list));
 
-  smx_actor_t smx_process, smx_process_safe;
+  smx_actor_t smx_process;
+  smx_actor_t smx_process_safe;
   xbt_swag_foreach_safe(smx_process, smx_process_safe, process_list) {
     XBT_DEBUG("kill %s", smx_process->cname());
     SIMIX_process_kill(smx_process, issuer);
   }
 
-  setState(SURF_VM_STATE_CREATED);
+  setState(SURF_VM_STATE_DESTROYED);
 
   /* FIXME: we may have to do something at the surf layer, e.g., vcpu action */
 }
@@ -244,15 +250,12 @@ void VirtualMachineImpl::setPm(s4u::Host* destination)
   /* create a cpu action bound to the pm model at the destination. */
   surf::CpuAction* new_cpu_action = static_cast<surf::CpuAction*>(destination->pimpl_cpu->execution_start(0));
 
-  surf::Action::State state = action_->getState();
-  if (state != surf::Action::State::done)
-    XBT_CRITICAL("FIXME: may need a proper handling, %d", static_cast<int>(state));
   if (action_->getRemainsNoUpdate() > 0)
     XBT_CRITICAL("FIXME: need copy the state(?), %f", action_->getRemainsNoUpdate());
 
   /* keep the bound value of the cpu action of the VM. */
   double old_bound = action_->getBound();
-  if (old_bound != 0) {
+  if (old_bound > 0) {
     XBT_DEBUG("migrate VM(%s): set bound (%f) at %s", vm_name, old_bound, pm_name_dst);
     new_cpu_action->setBound(old_bound);
   }

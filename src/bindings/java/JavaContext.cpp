@@ -1,26 +1,21 @@
-/* context_java - implementation of context switching for java threads */
+/* Context switching within the JVM.                                        */
 
-/* Copyright (c) 2009-2010, 2012-2014. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2009-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include <functional>
-#include <utility>
-
 #include "JavaContext.hpp"
 #include "jxbt_utilities.h"
 #include "src/simix/smx_private.h"
-#include "xbt/dynar.h"
-#include <simgrid/simix.h>
-#include <xbt/ex.h>
-#include <xbt/ex.hpp>
-#include <xbt/function_types.h>
+#include "xbt/ex.hpp"
 
-extern JavaVM *__java_vm;
+#include <functional>
+#include <utility>
 
-XBT_LOG_NEW_DEFAULT_CATEGORY(jmsg, "MSG for Java(TM)");
+extern "C" JavaVM* __java_vm;
+
+XBT_LOG_NEW_DEFAULT_CATEGORY(java, "MSG for Java(TM)");
 
 namespace simgrid {
 namespace kernel {
@@ -111,10 +106,9 @@ void* JavaContext::wrapper(void *data)
   //Attach the thread to the JVM
 
   JNIEnv *env;
-  XBT_ATTRIB_UNUSED jint error =
-    __java_vm->AttachCurrentThread((void **)&env, nullptr);
+  XBT_ATTRIB_UNUSED jint error = __java_vm->AttachCurrentThread((void**)&env, nullptr);
   xbt_assert((error == JNI_OK), "The thread could not be attached to the JVM");
-  context->jenv = get_current_thread_env();
+  context->jenv = env;
   //Wait for the first scheduling round to happen.
   xbt_os_sem_acquire(context->begin);
   //Create the "Process" object if needed.
@@ -139,7 +133,7 @@ void JavaContext::stop()
     // (as the ones created for the VM migration). The Java exception will not be catched anywhere.
     // Bad things happen currently if these actors get killed, unfortunately.
     jxbt_throw_by_name(env, "org/simgrid/msg/ProcessKilledError",
-                       bprintf("Process %s killed from file JavaContext.cpp)", this->process()->name.c_str()));
+                       std::string("Process ") + this->process()->cname() + " killed from file JavaContext.cpp");
 
     // (remember that throwing a java exception from C does not break the C execution path.
     //  Instead, it marks the exception to be raised when returning to the Java world and

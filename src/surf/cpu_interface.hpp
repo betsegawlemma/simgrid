@@ -1,5 +1,4 @@
-/* Copyright (c) 2004-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -7,7 +6,7 @@
 #ifndef SURF_CPU_INTERFACE_HPP_
 #define SURF_CPU_INTERFACE_HPP_
 
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "src/surf/maxmin_private.hpp"
 
 /***********
@@ -105,7 +104,6 @@ public:
   virtual double getAvailableSpeed();
 
   /** @brief Get the current Cpu computational speed */
-  virtual double getPstateSpeedCurrent();
   virtual double getPstateSpeed(int pstate_index);
 
   virtual int getNbPStates();
@@ -114,14 +112,12 @@ public:
 
   simgrid::s4u::Host* getHost() { return host_; }
 
-public:
   int coresAmount_ = 1;
   simgrid::s4u::Host* host_;
 
   std::vector<double> speedPerPstate_; /*< List of supported CPU capacities (pstate related) */
   int pstate_ = 0;                     /*< Current pstate (index in the speedPeakList)*/
 
-public:
   virtual void setStateTrace(tmgr_trace_t trace); /*< setup the trace file with states events (ON or OFF). Trace must contain boolean values (0 or 1). */
   virtual void setSpeedTrace(tmgr_trace_t trace); /*< setup the trace file with availability events (peak speed changes due to external load). Trace must contain relative values (ratio between 0 and 1) */
 

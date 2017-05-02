@@ -1,16 +1,17 @@
 /* selector for collective algorithms based on mvapich decision logic, with calibration from Stampede cluster at TACC*/
-
-/* Copyright (c) 2009-2010, 2013-2014. The SimGrid Team.
- * All rights reserved.                                                     */
-
 /* This is the tuning used by MVAPICH for Stampede platform based on (MV2_ARCH_INTEL_XEON_E5_2680_16, MV2_HCA_MLX_CX_FDR) */
 
+/* Copyright (c) 2009-2017. The SimGrid Team. All rights reserved.          */
 
+/* This program is free software; you can redistribute it and/or modify it
+ * under the terms of the license (GNU LGPL) which comes with this package. */
 
 /************ Alltoall variables and initializers                        */
 
 #define MV2_MAX_NB_THRESHOLDS  32
 
+
+XBT_PUBLIC(void) smpi_coll_cleanup_mvapich2(void);
 
 typedef struct {
   int min;
@@ -37,11 +38,11 @@ int *mv2_size_alltoall_tuning_table = NULL;
 mv2_alltoall_tuning_table **mv2_alltoall_thresholds_table = NULL;
 
 
-#define MPIR_Alltoall_bruck_MV2 smpi_coll_tuned_alltoall_bruck
-#define MPIR_Alltoall_RD_MV2 smpi_coll_tuned_alltoall_rdb
-#define MPIR_Alltoall_Scatter_dest_MV2 smpi_coll_tuned_alltoall_mvapich2_scatter_dest
-#define MPIR_Alltoall_pairwise_MV2 smpi_coll_tuned_alltoall_pair
-#define MPIR_Alltoall_inplace_MV2 smpi_coll_tuned_alltoall_ring 
+#define MPIR_Alltoall_bruck_MV2 simgrid::smpi::Coll_alltoall_bruck::alltoall
+#define MPIR_Alltoall_RD_MV2 simgrid::smpi::Coll_alltoall_rdb::alltoall
+#define MPIR_Alltoall_Scatter_dest_MV2 simgrid::smpi::Coll_alltoall_mvapich2_scatter_dest::alltoall
+#define MPIR_Alltoall_pairwise_MV2 simgrid::smpi::Coll_alltoall_pair::alltoall
+#define MPIR_Alltoall_inplace_MV2 simgrid::smpi::Coll_alltoall_ring::alltoall 
 
 
 static void init_mv2_alltoall_tables_stampede(){
@@ -49,15 +50,15 @@ static void init_mv2_alltoall_tables_stampede(){
   int agg_table_sum = 0;
   mv2_alltoall_tuning_table **table_ptrs = NULL;
   mv2_alltoall_num_ppn_conf = 3;
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
-  mv2_alltoall_thresholds_table = xbt_malloc(sizeof(mv2_alltoall_tuning_table *)
-      * mv2_alltoall_num_ppn_conf);
-  table_ptrs = xbt_malloc(sizeof(mv2_alltoall_tuning_table *)
-      * mv2_alltoall_num_ppn_conf);
-  mv2_size_alltoall_tuning_table = xbt_malloc(sizeof(int) *
-      mv2_alltoall_num_ppn_conf);
-  mv2_alltoall_table_ppn_conf = xbt_malloc(mv2_alltoall_num_ppn_conf * sizeof(int));
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  mv2_alltoall_thresholds_table = static_cast<mv2_alltoall_tuning_table**>(xbt_malloc(sizeof(mv2_alltoall_tuning_table *)
+      * mv2_alltoall_num_ppn_conf));
+  table_ptrs = static_cast<mv2_alltoall_tuning_table**>(xbt_malloc(sizeof(mv2_alltoall_tuning_table *)
+      * mv2_alltoall_num_ppn_conf));
+  mv2_size_alltoall_tuning_table = static_cast<int*>(xbt_malloc(sizeof(int) *
+      mv2_alltoall_num_ppn_conf));
+  mv2_alltoall_table_ppn_conf = static_cast<int*>(xbt_malloc(mv2_alltoall_num_ppn_conf * sizeof(int)));
   mv2_alltoall_table_ppn_conf[0] = 1;
   mv2_size_alltoall_tuning_table[0] = 6;
   mv2_alltoall_tuning_table mv2_tmp_alltoall_thresholds_table_1ppn[] = {
@@ -272,7 +273,7 @@ static void init_mv2_alltoall_tables_stampede(){
       agg_table_sum += mv2_size_alltoall_tuning_table[i];
   }
   mv2_alltoall_thresholds_table[0] =
-      xbt_malloc(agg_table_sum * sizeof (mv2_alltoall_tuning_table));
+      static_cast<mv2_alltoall_tuning_table*>(xbt_malloc(agg_table_sum * sizeof (mv2_alltoall_tuning_table)));
   memcpy(mv2_alltoall_thresholds_table[0], table_ptrs[0],
       (sizeof(mv2_alltoall_tuning_table)
           * mv2_size_alltoall_tuning_table[0]));
@@ -295,7 +296,7 @@ static void init_mv2_alltoall_tables_stampede(){
 typedef struct {
   int min;
   int max;
-  int (*MV2_pt_Allgather_function)(void *sendbuf,
+  int (*MV2_pt_Allgatherction)(void *sendbuf,
       int sendcount,
       MPI_Datatype sendtype,
       void *recvbuf,
@@ -310,7 +311,7 @@ typedef struct {
   mv2_allgather_tuning_element inter_leader[MV2_MAX_NB_THRESHOLDS];
 } mv2_allgather_tuning_table;
 
-int (*MV2_Allgather_function)(void *sendbuf,
+int (*MV2_Allgatherction)(void *sendbuf,
     int sendcount,
     MPI_Datatype sendtype,
     void *recvbuf,
@@ -332,28 +333,28 @@ static int MPIR_Allgather_RD_Allgather_Comm_MV2( void *sendbuf,
     return 0;
 }
 
-#define MPIR_Allgather_Bruck_MV2 smpi_coll_tuned_allgather_bruck
-#define MPIR_Allgather_RD_MV2 smpi_coll_tuned_allgather_rdb
-#define MPIR_Allgather_Ring_MV2 smpi_coll_tuned_allgather_ring
-#define MPIR_2lvl_Allgather_MV2 smpi_coll_tuned_allgather_mvapich2_smp
+#define MPIR_Allgather_Bruck_MV2 simgrid::smpi::Coll_allgather_bruck::allgather
+#define MPIR_Allgather_RD_MV2 simgrid::smpi::Coll_allgather_rdb::allgather
+#define MPIR_Allgather_Ring_MV2 simgrid::smpi::Coll_allgather_ring::allgather
+#define MPIR_2lvl_Allgather_MV2 simgrid::smpi::Coll_allgather_mvapich2_smp::allgather
 
 static void init_mv2_allgather_tables_stampede(){
   int i;
   int agg_table_sum = 0;
 
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   mv2_allgather_tuning_table **table_ptrs = NULL;
   mv2_allgather_num_ppn_conf = 3;
   mv2_allgather_thresholds_table
-  = xbt_malloc(sizeof(mv2_allgather_tuning_table *)
-      * mv2_allgather_num_ppn_conf);
-  table_ptrs = xbt_malloc(sizeof(mv2_allgather_tuning_table *)
-      * mv2_allgather_num_ppn_conf);
-  mv2_size_allgather_tuning_table = xbt_malloc(sizeof(int) *
-      mv2_allgather_num_ppn_conf);
+  = static_cast<mv2_allgather_tuning_table**>(xbt_malloc(sizeof(mv2_allgather_tuning_table *)
+      * mv2_allgather_num_ppn_conf));
+  table_ptrs = static_cast<mv2_allgather_tuning_table**>(xbt_malloc(sizeof(mv2_allgather_tuning_table *)
+      * mv2_allgather_num_ppn_conf));
+  mv2_size_allgather_tuning_table = static_cast<int*>(xbt_malloc(sizeof(int) *
+      mv2_allgather_num_ppn_conf));
   mv2_allgather_table_ppn_conf
-  = xbt_malloc(mv2_allgather_num_ppn_conf * sizeof(int));
+  = static_cast<int*>(xbt_malloc(mv2_allgather_num_ppn_conf * sizeof(int)));
   mv2_allgather_table_ppn_conf[0] = 1;
   mv2_size_allgather_tuning_table[0] = 6;
   mv2_allgather_tuning_table mv2_tmp_allgather_thresholds_table_1ppn[] = {
@@ -541,7 +542,7 @@ static void init_mv2_allgather_tables_stampede(){
       agg_table_sum += mv2_size_allgather_tuning_table[i];
   }
   mv2_allgather_thresholds_table[0] =
-      xbt_malloc(agg_table_sum * sizeof (mv2_allgather_tuning_table));
+      static_cast<mv2_allgather_tuning_table*>(xbt_malloc(agg_table_sum * sizeof (mv2_allgather_tuning_table)));
   memcpy(mv2_allgather_thresholds_table[0], table_ptrs[0],
       (sizeof(mv2_allgather_tuning_table)
           * mv2_size_allgather_tuning_table[0]));
@@ -591,18 +592,19 @@ MV2_Gather_function_ptr MV2_Gather_inter_leader_function = NULL;
 MV2_Gather_function_ptr MV2_Gather_intra_node_function = NULL;
 
 
-#define MPIR_Gather_MV2_Direct smpi_coll_tuned_gather_ompi_basic_linear
-#define MPIR_Gather_MV2_two_level_Direct smpi_coll_tuned_gather_mvapich2_two_level
-#define MPIR_Gather_intra smpi_coll_tuned_gather_mpich
+
+#define MPIR_Gather_MV2_Direct simgrid::smpi::Coll_gather_ompi_basic_linear::gather
+#define MPIR_Gather_MV2_two_level_Direct simgrid::smpi::Coll_gather_mvapich2_two_level::gather
+#define MPIR_Gather_intra simgrid::smpi::Coll_gather_mpich::gather
 
 
 static void init_mv2_gather_tables_stampede(){
 
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   mv2_size_gather_tuning_table=7;
-  mv2_gather_thresholds_table = xbt_malloc(mv2_size_gather_tuning_table*
-      sizeof (mv2_gather_tuning_table));
+  mv2_gather_thresholds_table = static_cast<mv2_gather_tuning_table*>(xbt_malloc(mv2_size_gather_tuning_table*
+      sizeof (mv2_gather_tuning_table)));
   mv2_gather_tuning_table mv2_tmp_gather_thresholds_table[]={
       {16,
           2,{{0, 524288, &MPIR_Gather_MV2_Direct},
@@ -679,17 +681,17 @@ int (*MV2_Allgatherv_function)(void *sendbuf,
 int mv2_size_allgatherv_tuning_table = 0;
 mv2_allgatherv_tuning_table *mv2_allgatherv_thresholds_table = NULL;
 
-#define MPIR_Allgatherv_Rec_Doubling_MV2 smpi_coll_tuned_allgatherv_mpich_rdb
-#define MPIR_Allgatherv_Bruck_MV2 smpi_coll_tuned_allgatherv_ompi_bruck
-#define MPIR_Allgatherv_Ring_MV2 smpi_coll_tuned_allgatherv_mpich_ring
+#define MPIR_Allgatherv_Rec_Doubling_MV2 simgrid::smpi::Coll_allgatherv_mpich_rdb::allgatherv
+#define MPIR_Allgatherv_Bruck_MV2 simgrid::smpi::Coll_allgatherv_ompi_bruck::allgatherv
+#define MPIR_Allgatherv_Ring_MV2 simgrid::smpi::Coll_allgatherv_mpich_ring::allgatherv
 
 
 static void init_mv2_allgatherv_tables_stampede(){
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   mv2_size_allgatherv_tuning_table = 6;
-  mv2_allgatherv_thresholds_table = xbt_malloc(mv2_size_allgatherv_tuning_table *
-      sizeof (mv2_allgatherv_tuning_table));
+  mv2_allgatherv_thresholds_table = static_cast<mv2_allgatherv_tuning_table*>(xbt_malloc(mv2_size_allgatherv_tuning_table *
+      sizeof (mv2_allgatherv_tuning_table)));
   mv2_allgatherv_tuning_table mv2_tmp_allgatherv_thresholds_table[] = {
       {
           16,
@@ -751,7 +753,7 @@ static void init_mv2_allgatherv_tables_stampede(){
 typedef struct {
   int min;
   int max;
-  int (*MV2_pt_Allreduce_function)(void *sendbuf,
+  int (*MV2_pt_Allreducection)(void *sendbuf,
       void *recvbuf,
       int count,
       MPI_Datatype datatype,
@@ -769,7 +771,7 @@ typedef struct {
 } mv2_allreduce_tuning_table;
 
 
-int (*MV2_Allreduce_function)(void *sendbuf,
+int (*MV2_Allreducection)(void *sendbuf,
     void *recvbuf,
     int count,
     MPI_Datatype datatype,
@@ -813,7 +815,7 @@ static  int MPIR_Allreduce_reduce_p2p_MV2( void *sendbuf,
     MPI_Datatype datatype,
     MPI_Op op, MPI_Comm  comm)
 {
-  mpi_coll_reduce_fun(sendbuf,recvbuf,count,datatype,op,0,comm);
+  simgrid::smpi::Colls::reduce(sendbuf,recvbuf,count,datatype,op,0,comm);
   return MPI_SUCCESS;
 }
 
@@ -823,21 +825,21 @@ static  int MPIR_Allreduce_reduce_shmem_MV2( void *sendbuf,
     MPI_Datatype datatype,
     MPI_Op op, MPI_Comm  comm)
 {
-  mpi_coll_reduce_fun(sendbuf,recvbuf,count,datatype,op,0,comm);
+  simgrid::smpi::Colls::reduce(sendbuf,recvbuf,count,datatype,op,0,comm);
   return MPI_SUCCESS;
 }
 
-#define MPIR_Allreduce_pt2pt_rd_MV2 smpi_coll_tuned_allreduce_rdb
-#define MPIR_Allreduce_pt2pt_rs_MV2 smpi_coll_tuned_allreduce_mvapich2_rs
-#define MPIR_Allreduce_two_level_MV2 smpi_coll_tuned_allreduce_mvapich2_two_level
+#define MPIR_Allreduce_pt2pt_rd_MV2 simgrid::smpi::Coll_allreduce_rdb::allreduce
+#define MPIR_Allreduce_pt2pt_rs_MV2 simgrid::smpi::Coll_allreduce_mvapich2_rs::allreduce
+#define MPIR_Allreduce_two_level_MV2 simgrid::smpi::Coll_allreduce_mvapich2_two_level::allreduce
 
 
 static void init_mv2_allreduce_tables_stampede(){
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   mv2_size_allreduce_tuning_table = 8;
-  mv2_allreduce_thresholds_table = xbt_malloc(mv2_size_allreduce_tuning_table *
-      sizeof (mv2_allreduce_tuning_table));
+  mv2_allreduce_thresholds_table = static_cast<mv2_allreduce_tuning_table*>(xbt_malloc(mv2_size_allreduce_tuning_table *
+      sizeof (mv2_allreduce_tuning_table)));
   mv2_allreduce_tuning_table mv2_tmp_allreduce_thresholds_table[] = {
       {
           16,
@@ -1019,25 +1021,25 @@ int mv2_intra_node_knomial_factor = 4;
 
 #define INTRA_NODE_ROOT 0
 
-#define MPIR_Pipelined_Bcast_Zcpy_MV2 smpi_coll_tuned_bcast_mpich
-#define MPIR_Pipelined_Bcast_MV2 smpi_coll_tuned_bcast_mpich
-#define MPIR_Bcast_binomial_MV2 smpi_coll_tuned_bcast_binomial_tree
-#define MPIR_Bcast_scatter_ring_allgather_shm_MV2 smpi_coll_tuned_bcast_scatter_LR_allgather
-#define MPIR_Bcast_scatter_doubling_allgather_MV2 smpi_coll_tuned_bcast_scatter_rdb_allgather
-#define MPIR_Bcast_scatter_ring_allgather_MV2 smpi_coll_tuned_bcast_scatter_LR_allgather
-#define MPIR_Shmem_Bcast_MV2 smpi_coll_tuned_bcast_mpich
-#define MPIR_Bcast_tune_inter_node_helper_MV2 smpi_coll_tuned_bcast_mvapich2_inter_node
-#define MPIR_Bcast_inter_node_helper_MV2 smpi_coll_tuned_bcast_mvapich2_inter_node
-#define MPIR_Knomial_Bcast_intra_node_MV2 smpi_coll_tuned_bcast_mvapich2_knomial_intra_node
-#define MPIR_Bcast_intra_MV2 smpi_coll_tuned_bcast_mvapich2_intra_node
+#define MPIR_Pipelined_Bcast_Zcpy_MV2 simgrid::smpi::Coll_bcast_mpich::bcast
+#define MPIR_Pipelined_Bcast_MV2 simgrid::smpi::Coll_bcast_mpich::bcast
+#define MPIR_Bcast_binomial_MV2 simgrid::smpi::Coll_bcast_binomial_tree::bcast
+#define MPIR_Bcast_scatter_ring_allgather_shm_MV2 simgrid::smpi::Coll_bcast_scatter_LR_allgather::bcast
+#define MPIR_Bcast_scatter_doubling_allgather_MV2 simgrid::smpi::Coll_bcast_scatter_rdb_allgather::bcast
+#define MPIR_Bcast_scatter_ring_allgather_MV2 simgrid::smpi::Coll_bcast_scatter_LR_allgather::bcast
+#define MPIR_Shmem_Bcast_MV2 simgrid::smpi::Coll_bcast_mpich::bcast
+#define MPIR_Bcast_tune_inter_node_helper_MV2 simgrid::smpi::Coll_bcast_mvapich2_inter_node::bcast
+#define MPIR_Bcast_inter_node_helper_MV2 simgrid::smpi::Coll_bcast_mvapich2_inter_node::bcast
+#define MPIR_Knomial_Bcast_intra_node_MV2 simgrid::smpi::Coll_bcast_mvapich2_knomial_intra_node::bcast
+#define MPIR_Bcast_intra_MV2 simgrid::smpi::Coll_bcast_mvapich2_intra_node::bcast
 
 static void init_mv2_bcast_tables_stampede(){
  //Stampede,
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   mv2_size_bcast_tuning_table=8;
-  mv2_bcast_thresholds_table = xbt_malloc(mv2_size_bcast_tuning_table *
-  sizeof (mv2_bcast_tuning_table));
+  mv2_bcast_thresholds_table = static_cast<mv2_bcast_tuning_table*>(xbt_malloc(mv2_size_bcast_tuning_table *
+  sizeof (mv2_bcast_tuning_table)));
 
   mv2_bcast_tuning_table mv2_tmp_bcast_thresholds_table[]={
     {
@@ -1292,21 +1294,21 @@ int (*MV2_Reduce_intra_function)( void *sendbuf,
     MPI_Comm  comm_ptr)=NULL;
 
 
-#define MPIR_Reduce_inter_knomial_wrapper_MV2 smpi_coll_tuned_reduce_mvapich2_knomial
-#define MPIR_Reduce_intra_knomial_wrapper_MV2 smpi_coll_tuned_reduce_mvapich2_knomial
-#define MPIR_Reduce_binomial_MV2 smpi_coll_tuned_reduce_binomial
-#define MPIR_Reduce_redscat_gather_MV2 smpi_coll_tuned_reduce_scatter_gather
-#define MPIR_Reduce_shmem_MV2 smpi_coll_tuned_reduce_ompi_basic_linear
-#define MPIR_Reduce_two_level_helper_MV2 smpi_coll_tuned_reduce_mvapich2_two_level
+#define MPIR_Reduce_inter_knomial_wrapper_MV2 simgrid::smpi::Coll_reduce_mvapich2_knomial::reduce
+#define MPIR_Reduce_intra_knomial_wrapper_MV2 simgrid::smpi::Coll_reduce_mvapich2_knomial::reduce
+#define MPIR_Reduce_binomial_MV2 simgrid::smpi::Coll_reduce_binomial::reduce
+#define MPIR_Reduce_redscat_gather_MV2 simgrid::smpi::Coll_reduce_scatter_gather::reduce
+#define MPIR_Reduce_shmem_MV2 simgrid::smpi::Coll_reduce_ompi_basic_linear::reduce
+#define MPIR_Reduce_two_level_helper_MV2 simgrid::smpi::Coll_reduce_mvapich2_two_level::reduce
 
 
 static void init_mv2_reduce_tables_stampede(){
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   /*Stampede*/
   mv2_size_reduce_tuning_table = 8;
-  mv2_reduce_thresholds_table = xbt_malloc(mv2_size_reduce_tuning_table *
-      sizeof (mv2_reduce_tuning_table));
+  mv2_reduce_thresholds_table = static_cast<mv2_reduce_tuning_table*>(xbt_malloc(mv2_size_reduce_tuning_table *
+      sizeof (mv2_reduce_tuning_table)));
   mv2_reduce_tuning_table mv2_tmp_reduce_thresholds_table[] = {
       {
           16,
@@ -1534,22 +1536,22 @@ static  int MPIR_Reduce_Scatter_Basic_MV2(void *sendbuf,
     MPI_Op op,
     MPI_Comm comm)
 {
-  smpi_mpi_reduce_scatter(sendbuf,recvbuf,recvcnts,datatype,op,comm);
+  simgrid::smpi::Coll_reduce_scatter_default::reduce_scatter(sendbuf,recvbuf,recvcnts,datatype,op,comm);
   return MPI_SUCCESS;
 }
-#define MPIR_Reduce_scatter_non_comm_MV2 smpi_coll_tuned_reduce_scatter_mpich_noncomm
-#define MPIR_Reduce_scatter_Rec_Halving_MV2 smpi_coll_tuned_reduce_scatter_ompi_basic_recursivehalving
-#define MPIR_Reduce_scatter_Pair_Wise_MV2 smpi_coll_tuned_reduce_scatter_mpich_pair
+#define MPIR_Reduce_scatter_non_comm_MV2 simgrid::smpi::Coll_reduce_scatter_mpich_noncomm::reduce_scatter
+#define MPIR_Reduce_scatter_Rec_Halving_MV2 simgrid::smpi::Coll_reduce_scatter_ompi_basic_recursivehalving::reduce_scatter
+#define MPIR_Reduce_scatter_Pair_Wise_MV2 simgrid::smpi::Coll_reduce_scatter_mpich_pair::reduce_scatter
 
 
 
 
 static void init_mv2_reduce_scatter_tables_stampede(){
-  if(smpi_coll_cleanup_callback==NULL)
-    smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+  if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+    simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
   mv2_size_red_scat_tuning_table = 6;
-  mv2_red_scat_thresholds_table = xbt_malloc(mv2_size_red_scat_tuning_table *
-      sizeof (mv2_red_scat_tuning_table));
+  mv2_red_scat_thresholds_table = static_cast<mv2_red_scat_tuning_table*>(xbt_malloc(mv2_size_red_scat_tuning_table *
+      sizeof (mv2_red_scat_tuning_table)));
   mv2_red_scat_tuning_table mv2_tmp_red_scat_thresholds_table[] = {
       {
           16,
@@ -1662,31 +1664,31 @@ int MPIR_Scatter_mcst_wrap_MV2(void *sendbuf,
   return 0;
 }
 
-#define MPIR_Scatter_MV2_Binomial smpi_coll_tuned_scatter_ompi_binomial
-#define MPIR_Scatter_MV2_Direct smpi_coll_tuned_scatter_ompi_basic_linear
-#define MPIR_Scatter_MV2_two_level_Binomial smpi_coll_tuned_scatter_mvapich2_two_level_binomial
-#define MPIR_Scatter_MV2_two_level_Direct smpi_coll_tuned_scatter_mvapich2_two_level_direct
+#define MPIR_Scatter_MV2_Binomial simgrid::smpi::Coll_scatter_ompi_binomial::scatter
+#define MPIR_Scatter_MV2_Direct  simgrid::smpi::Coll_scatter_ompi_basic_linear::scatter
+#define MPIR_Scatter_MV2_two_level_Binomial  simgrid::smpi::Coll_scatter_mvapich2_two_level_binomial::scatter
+#define MPIR_Scatter_MV2_two_level_Direct  simgrid::smpi::Coll_scatter_mvapich2_two_level_direct::scatter
 
 
 
 
 static void init_mv2_scatter_tables_stampede(){
-    if(smpi_coll_cleanup_callback==NULL)
-      smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
+    if(simgrid::smpi::Colls::smpi_coll_cleanup_callback==NULL)
+      simgrid::smpi::Colls::smpi_coll_cleanup_callback=&smpi_coll_cleanup_mvapich2;
 
     int agg_table_sum = 0;
     int i;
     mv2_scatter_tuning_table **table_ptrs = NULL;
     mv2_scatter_num_ppn_conf = 3;
     mv2_scatter_thresholds_table
-    = xbt_malloc(sizeof(mv2_scatter_tuning_table *)
-        * mv2_scatter_num_ppn_conf);
-    table_ptrs = xbt_malloc(sizeof(mv2_scatter_tuning_table *)
-        * mv2_scatter_num_ppn_conf);
-    mv2_size_scatter_tuning_table = xbt_malloc(sizeof(int) *
-        mv2_scatter_num_ppn_conf);
+    = static_cast<mv2_scatter_tuning_table**>(xbt_malloc(sizeof(mv2_scatter_tuning_table *)
+        * mv2_scatter_num_ppn_conf));
+    table_ptrs = static_cast<mv2_scatter_tuning_table**>(xbt_malloc(sizeof(mv2_scatter_tuning_table *)
+        * mv2_scatter_num_ppn_conf));
+    mv2_size_scatter_tuning_table = static_cast<int*>(xbt_malloc(sizeof(int) *
+        mv2_scatter_num_ppn_conf));
     mv2_scatter_table_ppn_conf
-    = xbt_malloc(mv2_scatter_num_ppn_conf * sizeof(int));
+    = static_cast<int*>(xbt_malloc(mv2_scatter_num_ppn_conf * sizeof(int)));
     mv2_scatter_table_ppn_conf[0] = 1;
     mv2_size_scatter_tuning_table[0] = 6;
     mv2_scatter_tuning_table mv2_tmp_scatter_thresholds_table_1ppn[] = {
@@ -1967,7 +1969,7 @@ static void init_mv2_scatter_tables_stampede(){
         agg_table_sum += mv2_size_scatter_tuning_table[i];
     }
     mv2_scatter_thresholds_table[0] =
-        xbt_malloc(agg_table_sum * sizeof (mv2_scatter_tuning_table));
+        static_cast<mv2_scatter_tuning_table*>(xbt_malloc(agg_table_sum * sizeof (mv2_scatter_tuning_table)));
     memcpy(mv2_scatter_thresholds_table[0], table_ptrs[0],
         (sizeof(mv2_scatter_tuning_table)
             * mv2_size_scatter_tuning_table[0]));
