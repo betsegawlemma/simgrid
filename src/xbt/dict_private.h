@@ -1,14 +1,13 @@
 /* dict_elm - elements of generic dictionnaries                             */
-/* This file is not to be loaded from anywhere but dict.cpp                   */
+/* This file is not to be loaded from anywhere but dict.cpp                 */
 
-/* Copyright (c) 2004-2011, 2013-2014. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _XBT_DICT_PRIVATE_H__
-#define _XBT_DICT_PRIVATE_H__
+#ifndef XBT_DICT_PRIVATE_H
+#define XBT_DICT_PRIVATE_H
 
 #include "xbt/base.h"
 #include "xbt/sysdep.h"
@@ -21,11 +20,6 @@
 SG_BEGIN_DECL()
 
 #define MAX_FILL_PERCENT 80
-
-typedef struct s_xbt_het_dictelm {
-  s_xbt_dictelm_t element;
-  void_f_pvoid_t free_f;
-} s_xbt_het_dictelm_t, *xbt_het_dictelm_t;
 
 typedef struct s_xbt_dict {
   void_f_pvoid_t free_f;
@@ -43,17 +37,11 @@ XBT_PRIVATE void * dict_elm_mallocator_new_f(void);
 #define dict_elm_mallocator_free_f xbt_free_f
 #define dict_elm_mallocator_reset_f ((void_f_pvoid_t)NULL)
 
-extern XBT_PRIVATE xbt_mallocator_t dict_het_elm_mallocator;
-extern XBT_PRIVATE void * dict_het_elm_mallocator_new_f(void);
-#define dict_het_elm_mallocator_free_f xbt_free_f
-#define dict_het_elm_mallocator_reset_f ((void_f_pvoid_t)NULL)
-
 /*####[ Function prototypes ]################################################*/
-XBT_PRIVATE xbt_dictelm_t xbt_dictelm_new(xbt_dict_t dict, const char *key, int key_len,
-                              unsigned int hash_code, void *content, void_f_pvoid_t free_f);
+XBT_PRIVATE xbt_dictelm_t xbt_dictelm_new(const char* key, int key_len, unsigned int hash_code, void* content);
 XBT_PRIVATE void xbt_dictelm_free(xbt_dict_t dict, xbt_dictelm_t element);
 XBT_PRIVATE void xbt_dictelm_set_data(xbt_dict_t dict, xbt_dictelm_t element, void *data, void_f_pvoid_t free_ctn);
 
 SG_END_DECL()
 
-#endif                          /* _XBT_DICT_PRIVATE_H_ */
+#endif

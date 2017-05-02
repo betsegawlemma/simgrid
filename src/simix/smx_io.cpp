@@ -1,5 +1,4 @@
-/* Copyright (c) 2007-2010, 2012-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -9,7 +8,7 @@
 #include <xbt/log.h>
 #include <xbt/dict.h>
 
-#include <simgrid/s4u/host.hpp>
+#include "simgrid/s4u/Host.hpp"
 
 #include <mc/mc.h>
 
@@ -19,7 +18,6 @@
 #include "src/kernel/activity/SynchroIo.hpp"
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(simix_io, simix, "Logging specific to SIMIX (io)");
-
 
 /**
  * \brief Internal function to create a SIMIX storage.
@@ -212,44 +210,12 @@ int SIMIX_file_move(smx_actor_t process, smx_file_t file, const char* fullpath)
   return  surf_host_file_move(host, file->surf_file, fullpath);
 }
 
-sg_size_t SIMIX_storage_get_size(smx_storage_t storage){
-  return surf_storage_get_size(storage);
-}
-
-sg_size_t simcall_HANDLER_storage_get_free_size(smx_simcall_t simcall, smx_storage_t storage)
-{
-  return SIMIX_storage_get_free_size(simcall->issuer, storage);
-}
-
-sg_size_t SIMIX_storage_get_free_size(smx_actor_t process, smx_storage_t storage)
-{
-  return  surf_storage_get_free_size(storage);
-}
-
-sg_size_t simcall_HANDLER_storage_get_used_size(smx_simcall_t simcall, smx_storage_t storage)
-{
-  return SIMIX_storage_get_used_size(simcall->issuer, storage);
-}
-
-sg_size_t SIMIX_storage_get_used_size(smx_actor_t process, smx_storage_t storage)
-{
-  return  surf_storage_get_used_size(storage);
-}
-
 xbt_dict_t SIMIX_storage_get_properties(smx_storage_t storage){
   return surf_storage_get_properties(storage);
 }
 
 const char* SIMIX_storage_get_name(smx_storage_t storage){
   return sg_storage_name(storage);
-}
-
-xbt_dict_t SIMIX_storage_get_content(smx_storage_t storage){
-  return surf_storage_get_content(storage);
-}
-
-const char* SIMIX_storage_get_host(smx_storage_t storage){
-  return surf_storage_get_host(storage);
 }
 
 void SIMIX_io_destroy(smx_activity_t synchro)

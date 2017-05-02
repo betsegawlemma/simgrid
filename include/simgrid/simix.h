@@ -39,9 +39,9 @@ namespace context {
 }
 }
 
-typedef simgrid::kernel::context::Context *smx_context_t;
-typedef simgrid::simix::ActorImpl *smx_actor_t;
-typedef simgrid::simix::Mutex   *smx_mutex_t;
+typedef simgrid::kernel::context::Context* smx_context_t;
+typedef simgrid::simix::ActorImpl* smx_actor_t;
+typedef simgrid::simix::Mutex* smx_mutex_t;
 typedef simgrid::kernel::activity::MailboxImpl* smx_mailbox_t;
 
 #else
@@ -127,7 +127,7 @@ extern int smx_context_guard_size_was_set;
 SG_BEGIN_DECL()
 
 XBT_PUBLIC(xbt_dynar_t) SIMIX_process_get_runnable();
-XBT_PUBLIC(smx_actor_t) SIMIX_process_from_PID(int PID);
+XBT_PUBLIC(smx_actor_t) SIMIX_process_from_PID(aid_t PID);
 XBT_PUBLIC(xbt_dynar_t) SIMIX_processes_as_dynar();
 
 /* parallelism */
@@ -368,16 +368,8 @@ XBT_PUBLIC(sg_size_t) simcall_file_tell(smx_file_t fd);
 XBT_PUBLIC(int) simcall_file_seek(smx_file_t fd, sg_offset_t offset, int origin);
 XBT_PUBLIC(int) simcall_file_move(smx_file_t fd, const char* fullpath);
 /*****************************   Storage   **********************************/
-XBT_PUBLIC(sg_size_t) simcall_storage_get_free_size (smx_storage_t storage);
-XBT_PUBLIC(sg_size_t) simcall_storage_get_used_size (smx_storage_t storage);
 XBT_PUBLIC(xbt_dict_t) simcall_storage_get_properties(smx_storage_t storage);
-XBT_PUBLIC(void*) SIMIX_storage_get_data(smx_storage_t storage);
-XBT_PUBLIC(void) SIMIX_storage_set_data(smx_storage_t storage, void *data);
-XBT_PUBLIC(xbt_dict_t) SIMIX_storage_get_content(smx_storage_t storage);
-XBT_PUBLIC(xbt_dict_t) simcall_storage_get_content(smx_storage_t storage);
 XBT_PUBLIC(const char*) SIMIX_storage_get_name(smx_storage_t storage);
-XBT_PUBLIC(sg_size_t) SIMIX_storage_get_size(smx_storage_t storage);
-XBT_PUBLIC(const char*) SIMIX_storage_get_host(smx_storage_t storage);
 
 /************************** MC simcalls   **********************************/
 XBT_PUBLIC(int) simcall_mc_random(int min, int max);

@@ -90,12 +90,11 @@ smx_activity_t simcall_execution_parallel_start(const char* name, int host_nb, s
                                                 double* flops_amount, double* bytes_amount, double amount, double rate,
                                                 double timeout)
 {
-  int i,j;
   /* checking for infinite values */
-  for (i = 0 ; i < host_nb ; ++i) {
+  for (int i = 0 ; i < host_nb ; ++i) {
     xbt_assert(std::isfinite(flops_amount[i]), "flops_amount[%d] is not finite!", i);
     if (bytes_amount != nullptr) {
-      for (j = 0 ; j < host_nb ; ++j) {
+      for (int j = 0 ; j < host_nb ; ++j) {
         xbt_assert(std::isfinite(bytes_amount[i + host_nb * j]),
                    "bytes_amount[%d+%d*%d] is not finite!", i, host_nb, j);
       }
@@ -752,26 +751,6 @@ int simcall_file_move(smx_file_t fd, const char* fullpath)
 
 /**
  * \ingroup simix_storage_management
- * \brief Returns the free space size on a given storage element.
- * \param storage a storage
- * \return Return the free space size on a given storage element (as sg_size_t)
- */
-sg_size_t simcall_storage_get_free_size (smx_storage_t storage){
-  return simcall_BODY_storage_get_free_size(storage);
-}
-
-/**
- * \ingroup simix_storage_management
- * \brief Returns the used space size on a given storage element.
- * \param storage a storage
- * \return Return the used space size on a given storage element (as sg_size_t)
- */
-sg_size_t simcall_storage_get_used_size (smx_storage_t storage){
-  return simcall_BODY_storage_get_used_size(storage);
-}
-
-/**
- * \ingroup simix_storage_management
  * \brief Returns a dict of the properties assigned to a storage element.
  *
  * \param storage A storage element
@@ -780,18 +759,6 @@ sg_size_t simcall_storage_get_used_size (smx_storage_t storage){
 xbt_dict_t simcall_storage_get_properties(smx_storage_t storage)
 {
   return simcall_BODY_storage_get_properties(storage);
-}
-
-/**
- * \ingroup simix_storage_management
- * \brief Returns a dict containing the content of a storage element.
- *
- * \param storage A storage element
- * \return The content of this storage element as a dict (full path file => size)
- */
-xbt_dict_t simcall_storage_get_content(smx_storage_t storage)
-{
-  return simcall_BODY_storage_get_content(storage);
 }
 
 void simcall_run_kernel(std::function<void()> const& code)

@@ -1,5 +1,4 @@
-/* Copyright (c) 2007-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -13,14 +12,13 @@
 
 #include <xbt/functional.hpp>
 
-#include "simgrid/s4u/engine.hpp"
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Engine.hpp"
+#include "simgrid/s4u/Host.hpp"
 
 #include "src/surf/surf_interface.hpp"
 #include "src/surf/storage_interface.hpp"
 #include "src/surf/xml/platf.hpp"
 #include "smx_private.h"
-#include "xbt/str.h"
 #include "xbt/ex.h"             /* ex_backtrace_display */
 #include "mc/mc.h"
 #include "src/mc/mc_replay.h"
@@ -92,18 +90,14 @@ static void segvhandler(int signum, siginfo_t *siginfo, void *context)
                     "Minimal Working Example (MWE) reproducing your problem and a full backtrace\n"
                     "of the fault captured with gdb or valgrind.\n",
             smx_context_stack_size / 1024);
-    if (XBT_LOG_ISENABLED(simix_kernel, xbt_log_priority_debug)) {
-      fprintf(stderr, "siginfo = {si_signo = %d, si_errno = %d, si_code = %d, si_addr = %p}\n",
-              siginfo->si_signo, siginfo->si_errno, siginfo->si_code, siginfo->si_addr);
-    }
   } else  if (siginfo->si_signo == SIGSEGV) {
     fprintf(stderr, "Segmentation fault.\n");
 #if HAVE_SMPI
-    if (smpi_enabled() && !smpi_privatize_global_variables) {
+    if (smpi_enabled() && smpi_privatize_global_variables == SMPI_PRIVATIZE_NONE) {
 #if HAVE_PRIVATIZATION
-      fprintf(stderr, "Try to enable SMPI variable privatization with --cfg=smpi/privatize-global-variables:yes.\n");
+      fprintf(stderr, "Try to enable SMPI variable privatization with --cfg=smpi/privatization:yes.\n");
 #else
-      fprintf(stderr, "Sadly, your system does not support --cfg=smpi/privatize-global-variables:yes (yet).\n");
+      fprintf(stderr, "Sadly, your system does not support --cfg=smpi/privatization:yes (yet).\n");
 #endif /* HAVE_PRIVATIZATION */
     }
 #endif /* HAVE_SMPI */
@@ -119,7 +113,8 @@ char sigsegv_stack[SIGSTKSZ];   /* alternate stack for SIGSEGV handler */
  */
 static void install_segvhandler()
 {
-  stack_t stack, old_stack;
+  stack_t stack;
+  stack_t old_stack;
   stack.ss_sp = sigsegv_stack;
   stack.ss_size = sizeof sigsegv_stack;
   stack.ss_flags = 0;
@@ -134,7 +129,8 @@ static void install_segvhandler()
     sigaltstack(&old_stack, nullptr);
   }
 
-  struct sigaction action, old_action;
+  struct sigaction action;
+  struct sigaction old_action;
   action.sa_sigaction = &segvhandler;
   action.sa_flags = SA_ONSTACK | SA_RESETHAND | SA_SIGINFO;
   sigemptyset(&action.sa_mask);
@@ -231,7 +227,8 @@ void SIMIX_global_init(int *argc, char **argv)
     sg_platf_init();
     simgrid::s4u::onPlatformCreated.connect(SIMIX_post_create_environment);
     simgrid::s4u::Host::onCreation.connect([](simgrid::s4u::Host& host) {
-      host.extension_set<simgrid::simix::Host>(new simgrid::simix::Host());
+      if (host.extension<simgrid::simix::Host>() == nullptr) // another callback to the same signal may have created it
+        host.extension_set<simgrid::simix::Host>(new simgrid::simix::Host());
     });
 
     simgrid::surf::storageCreatedCallbacks.connect([](simgrid::surf::Storage* storage) {
@@ -271,7 +268,7 @@ void SIMIX_clean()
 
 #if HAVE_SMPI
   if (SIMIX_process_count()>0){
-    if(smpi_process_initialized()){
+    if(smpi_process()->initialized()){
       xbt_die("Process exited without calling MPI_Finalize - Killing simulation");
     }else{
       XBT_WARN("Process called exit when leaving - Skipping cleanups");
@@ -305,6 +302,9 @@ void SIMIX_clean()
 
   xbt_os_mutex_destroy(simix_global->mutex);
   simix_global->mutex = nullptr;
+#if HAVE_MC
+  xbt_dynar_free(&simix_global->actors_vector);
+#endif
 
   /* Let's free maestro now */
   delete simix_global->maestro_process->context;
@@ -512,6 +512,12 @@ void SIMIX_run()
         SIMIX_wake_processes();
       } while (SIMIX_execute_tasks());
 
+      /* If only daemon processes remain, cancel their actions, mark them to die and reschedule them */
+      if (simix_global->process_list.size() == simix_global->daemons.size())
+        for (const auto& dmon : simix_global->daemons) {
+          XBT_DEBUG("Kill %s", dmon->cname());
+          SIMIX_process_kill(dmon, simix_global->maestro_process);
+        }
     }
 
     time = SIMIX_timer_next();
@@ -544,7 +550,9 @@ void SIMIX_run()
     /* Clean processes to destroy */
     SIMIX_process_empty_trash();
 
-    XBT_DEBUG("### time %f, empty %d", time, xbt_dynar_is_empty(simix_global->process_to_run));
+    XBT_DEBUG("### time %f, #processes %zu, #to_run %lu", time, simix_global->process_list.size(),
+              xbt_dynar_length(simix_global->process_to_run));
+
 
     if (xbt_dynar_is_empty(simix_global->process_to_run) &&
         !simix_global->process_list.empty())
@@ -688,5 +696,6 @@ void SIMIX_display_process_status()
 
 int SIMIX_is_maestro()
 {
-  return simix_global==nullptr /*SimDag*/|| SIMIX_process_self() == simix_global->maestro_process;
+  smx_actor_t self = SIMIX_process_self();
+  return simix_global == nullptr /*SimDag*/ || self == nullptr || self == simix_global->maestro_process;
 }

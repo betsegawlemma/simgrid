@@ -1,4 +1,4 @@
-/* Copyright (c) 2004-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -8,15 +8,15 @@
 
 #include <simgrid/s4u/Activity.hpp>
 #include <simgrid/s4u/Actor.hpp>
+#include <simgrid/s4u/Engine.hpp>
+#include <simgrid/s4u/Host.hpp>
 #include <simgrid/s4u/Mailbox.hpp>
-#include <simgrid/s4u/engine.hpp>
-#include <simgrid/s4u/host.hpp>
 
+#include <simgrid/s4u/Comm.hpp>
+#include <simgrid/s4u/ConditionVariable.hpp>
 #include <simgrid/s4u/Mutex.hpp>
-#include <simgrid/s4u/conditionVariable.hpp>
-#include <simgrid/s4u/comm.hpp>
 
-#include <simgrid/s4u/storage.hpp>
-#include <simgrid/s4u/file.hpp>
+#include <simgrid/s4u/File.hpp>
+#include <simgrid/s4u/Storage.hpp>
 
 #endif /* SIMGRID_S4U_S4U_H */

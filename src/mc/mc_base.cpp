@@ -1,5 +1,4 @@
-/* Copyright (c) 2008-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2008-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -32,9 +31,7 @@
 #include "src/mc/Process.hpp"
 #include "src/mc/ModelChecker.hpp"
 #include "src/mc/mc_smx.h"
-#endif
 
-#if HAVE_MC
 using simgrid::mc::remote;
 #endif
 
@@ -73,7 +70,7 @@ void wait_for_requests(void)
   }
 #if HAVE_MC
   xbt_dynar_reset(simix_global->actors_vector);
-  for (std::pair<int, smx_actor_t> kv : simix_global->process_list) {
+  for (std::pair<aid_t, smx_actor_t> kv : simix_global->process_list) {
     xbt_dynar_push_as(simix_global->actors_vector, smx_actor_t, kv.second);
   }
 #endif

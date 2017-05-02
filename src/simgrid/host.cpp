@@ -1,24 +1,28 @@
-/* Copyright (c) 2013-2016. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2013-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include <vector>
 
-#include "xbt/dict.h"
 #include "simgrid/host.h"
-#include <xbt/Extendable.hpp>
-#include <simgrid/s4u/host.hpp>
+#include "simgrid/s4u/Host.hpp"
+#include "xbt/Extendable.hpp"
+#include "xbt/dict.h"
 
 #include "src/kernel/routing/NetPoint.hpp"
 #include "src/simix/smx_host_private.h"
 #include "src/surf/HostImpl.hpp"
+#include "src/surf/cpu_interface.hpp"
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(sg_host, sd, "Logging specific to sg_hosts");
 
 // FIXME: The following duplicates the content of s4u::Host
-extern std::unordered_map<std::string, simgrid::s4u::Host*> host_list;
+namespace simgrid {
+namespace s4u {
+extern std::map<std::string, simgrid::s4u::Host*> host_list;
+}
+}
 
 extern "C" {
 
@@ -32,20 +36,20 @@ void sg_host_exit()
    * the tests.
    */
   std::vector<std::string> names = std::vector<std::string>();
-  for (auto kv : host_list)
+  for (auto kv : simgrid::s4u::host_list)
     names.push_back(kv.second->name());
 
   std::sort(names.begin(), names.end());
 
   for (auto name : names)
-    host_list.at(name)->destroy();
+    simgrid::s4u::host_list.at(name)->destroy();
 
   // host_list.clear(); This would be sufficient if the dict would contain smart_ptr. It's now useless
 }
 
 size_t sg_host_count()
 {
-  return host_list.size();
+  return simgrid::s4u::host_list.size();
 }
 /** @brief Returns the host list
  *
@@ -92,7 +96,7 @@ xbt_dynar_t sg_hosts_as_dynar()
 {
   xbt_dynar_t res = xbt_dynar_new(sizeof(sg_host_t),nullptr);
 
-  for (auto kv : host_list) {
+  for (auto kv : simgrid::s4u::host_list) {
     simgrid::s4u::Host* host = kv.second;
     if (host && host->pimpl_netpoint && host->pimpl_netpoint->isHost())
       xbt_dynar_push(res, &host);
@@ -102,8 +106,6 @@ xbt_dynar_t sg_hosts_as_dynar()
 }
 
 // ========= Layering madness ==============*
-
-#include "src/surf/cpu_interface.hpp"
 
 // ========== User data Layer ==========
 void *sg_host_user(sg_host_t host) {
@@ -122,9 +124,14 @@ xbt_dict_t sg_host_get_mounted_storage_list(sg_host_t host){
 }
 
 xbt_dynar_t sg_host_get_attached_storage_list(sg_host_t host){
-  return host->pimpl_->getAttachedStorageList();
+  std::vector<const char*>* storage_vector = new std::vector<const char*>();
+  xbt_dynar_t storage_dynar = xbt_dynar_new(sizeof(const char*), nullptr);
+  host->attachedStorages(storage_vector);
+  for (auto name : *storage_vector)
+    xbt_dynar_push(storage_dynar, &name);
+  delete storage_vector;
+  return storage_dynar;
 }
-
 
 // =========== user-level functions ===============
 // ================================================

@@ -1,20 +1,20 @@
-/* Functions related to the java storage API.                            */
+/* Java bindings of the Storage API.                                        */
 
-/* Copyright (c) 2012-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2012-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include <xbt/str.h>
-#include <surf/surf_routing.h>
-
 #include "simgrid/msg.h"
+#include "surf/surf_routing.h"
+
 #include "jmsg.h"
 #include "jmsg_storage.h"
 #include "jxbt_utilities.h"
 
-XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(jmsg);
+XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(java);
+
+SG_BEGIN_DECL()
 
 static jmethodID jstorage_method_Storage_constructor;
 static jfieldID jstorage_field_Storage_bind;
@@ -49,11 +49,6 @@ jobject jstorage_ref(JNIEnv * env, jobject jstorage) {
 
 void jstorage_unref(JNIEnv * env, jobject jstorage) {
   env->DeleteGlobalRef(jstorage);
-}
-
-const char *jstorage_get_name(jobject jstorage, JNIEnv * env) {
-  msg_storage_t storage = jstorage_get_native(env, jstorage);
-  return MSG_storage_get_name(storage);
 }
 
 JNIEXPORT jobject JNICALL Java_org_simgrid_msg_Storage_getByName(JNIEnv * env, jclass cls, jstring jname) {
@@ -233,3 +228,5 @@ JNIEXPORT jobjectArray JNICALL Java_org_simgrid_msg_Storage_all(JNIEnv * env, jc
   xbt_dynar_free(&table);
   return jtable;
 }
+
+SG_END_DECL()

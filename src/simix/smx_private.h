@@ -1,11 +1,10 @@
-/* Copyright (c) 2007-2010, 2012-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _SIMIX_PRIVATE_H
-#define _SIMIX_PRIVATE_H
+#ifndef SIMIX_PRIVATE_H
+#define SIMIX_PRIVATE_H
 
 #include <signal.h>
 #include "src/kernel/context/Context.hpp"
@@ -22,7 +21,7 @@ public:
   smx_context_factory_t context_factory = nullptr;
   xbt_dynar_t process_to_run = nullptr;
   xbt_dynar_t process_that_ran = nullptr;
-  std::map<int, smx_actor_t> process_list;
+  std::map<aid_t, smx_actor_t> process_list;
 #if HAVE_MC
   /* MCer cannot read the std::map above in the remote process, so we copy the info it needs in a dynar.
    * FIXME: This is supposed to be a temporary hack.
@@ -50,6 +49,8 @@ public:
 
   std::vector<simgrid::xbt::Task<void()>> tasks;
   std::vector<simgrid::xbt::Task<void()>> tasksTemp;
+
+  std::vector<simgrid::simix::ActorImpl*> daemons;
 };
 
 }

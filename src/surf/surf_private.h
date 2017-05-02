@@ -1,10 +1,10 @@
-/* Copyright (c) 2004-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _SURF_SURF_PRIVATE_H
-#define _SURF_SURF_PRIVATE_H
+#ifndef SURF_SURF_PRIVATE_H
+#define SURF_SURF_PRIVATE_H
 
 #include "surf/surf.h"
 #include "surf/maxmin.h"
@@ -33,6 +33,7 @@ typedef enum {
 /* Generic functions common to all models */
 
 XBT_PRIVATE FILE *surf_fopen(const char *name, const char *mode);
+XBT_PRIVATE std::ifstream* surf_ifsopen(const char* name);
 
 /* The __surf_is_absolute_file_path() returns 1 if
  * file_path is a absolute file path, in the other
@@ -45,7 +46,7 @@ extern XBT_PRIVATE simgrid::trace_mgr::future_evt_set *future_evt_set;
 
 XBT_PUBLIC(void) storage_register_callbacks();
 
-XBT_PUBLIC(void) generic_get_graph(xbt_graph_t graph, xbt_dict_t nodes, xbt_dict_t edges, NetZone_t rc);
+XBT_PUBLIC(void) generic_get_graph(xbt_graph_t graph, xbt_dict_t nodes, xbt_dict_t edges, sg_netzone_t rc);
 XBT_PRIVATE void parse_after_config();
 
 /********** Tracing **********/
@@ -55,4 +56,4 @@ void TRACE_surf_link_set_bandwidth(double date, const char *resource, double ban
 
 SG_END_DECL()
 
-#endif                          /* _SURF_SURF_PRIVATE_H */
+#endif

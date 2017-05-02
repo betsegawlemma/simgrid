@@ -1,10 +1,10 @@
-/* Copyright (c) 2004-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
+#include "simgrid/s4u/Engine.hpp"
 #include "simgrid/s4u/NetZone.hpp"
-#include "simgrid/s4u/engine.hpp"
 #include "src/msg/msg_private.h"
 
 #if HAVE_LUA
@@ -12,6 +12,8 @@
 #include <lauxlib.h>
 #include <lualib.h>
 #endif
+
+SG_BEGIN_DECL()
 
 /********************************* MSG **************************************/
 
@@ -63,7 +65,11 @@ msg_netzone_t MSG_environment_as_get_by_name(const char* name)
 
 xbt_dict_t MSG_environment_as_get_routing_sons(msg_netzone_t netzone)
 {
-  return netzone->children();
+  xbt_dict_t res = xbt_dict_new_homogeneous(nullptr);
+  for (auto elem : *netzone->children()) {
+    xbt_dict_set(res, elem->name(), static_cast<void*>(elem), nullptr);
+  }
+  return res;
 }
 
 const char* MSG_environment_as_get_property_value(msg_netzone_t netzone, const char* name)
@@ -78,5 +84,13 @@ void MSG_environment_as_set_property_value(msg_netzone_t netzone, const char* na
 
 xbt_dynar_t MSG_environment_as_get_hosts(msg_netzone_t netzone)
 {
-  return netzone->hosts();
+  xbt_dynar_t res = xbt_dynar_new(sizeof(sg_host_t), nullptr);
+
+  for (auto host : *netzone->hosts()) {
+    xbt_dynar_push(res, &host);
+  }
+
+  return res;
 }
+
+SG_END_DECL()

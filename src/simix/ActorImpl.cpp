@@ -1,5 +1,4 @@
-/* Copyright (c) 2007-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -17,7 +16,7 @@
 #include <xbt/log.h>
 #include <xbt/dict.h>
 
-#include <simgrid/s4u/host.hpp>
+#include "simgrid/s4u/Host.hpp"
 
 #include <mc/mc.h>
 
@@ -146,16 +145,16 @@ void SIMIX_process_cleanup(smx_actor_t process)
 /**
  * Garbage collection
  *
- * Should be called some time to time to free the memory allocated for processes
- * that have finished (or killed).
+ * Should be called some time to time to free the memory allocated for processes that have finished (or killed).
  */
 void SIMIX_process_empty_trash()
 {
-  smx_actor_t process = nullptr;
+  smx_actor_t process = static_cast<smx_actor_t>(xbt_swag_extract(simix_global->process_to_destroy));
 
-  while ((process = (smx_actor_t) xbt_swag_extract(simix_global->process_to_destroy))) {
+  while (process) {
     XBT_DEBUG("Getting rid of %p",process);
     intrusive_ptr_release(process);
+    process = static_cast<smx_actor_t>(xbt_swag_extract(simix_global->process_to_destroy));
   }
 }
 
@@ -165,10 +164,36 @@ namespace simix {
 ActorImpl::~ActorImpl()
 {
   delete this->context;
-  if (this->properties)
-    xbt_dict_free(&this->properties);
-  if (this->on_exit)
-    xbt_dynar_free(&this->on_exit);
+  xbt_dict_free(&this->properties);
+}
+
+static int dying_daemon(void* exit_status, void* data)
+{
+  std::vector<ActorImpl*>* vect = &simix_global->daemons;
+
+  auto it = std::find(vect->begin(), vect->end(), static_cast<ActorImpl*>(data));
+  xbt_assert(it != vect->end(), "The dying daemon is not a daemon after all. Please report that bug.");
+
+  /* Don't move the whole content since we don't really care about the order */
+  std::swap(*it, vect->back());
+  vect->pop_back();
+
+  return 0;
+}
+/** This process will be terminated automatically when the last non-daemon process finishes */
+void ActorImpl::daemonize()
+{
+  if (!daemon) {
+    daemon = true;
+    simix_global->daemons.push_back(this);
+    SIMIX_process_on_exit(this, dying_daemon, this);
+  }
+}
+
+/** Whether this process is daemonized */
+bool ActorImpl::isDaemon()
+{
+  return daemon;
 }
 
 void create_maestro(std::function<void()> code)
@@ -211,13 +236,8 @@ void SIMIX_maestro_create(void (*code)(void*), void* data)
  *
  * \return the process created
  */
-smx_actor_t SIMIX_process_create(
-                          const char *name,
-                          std::function<void()> code,
-                          void *data,
-                          sg_host_t host,
-                          xbt_dict_t properties,
-                          smx_actor_t parent_process)
+smx_actor_t SIMIX_process_create(const char* name, std::function<void()> code, void* data, simgrid::s4u::Host* host,
+                                 xbt_dict_t properties, smx_actor_t parent_process)
 {
 
   XBT_DEBUG("Start process %s on host '%s'", name, host->cname());
@@ -241,7 +261,7 @@ smx_actor_t SIMIX_process_create(
     process->ppid = parent_process->pid;
 /* SMPI process have their own data segment and each other inherit from their father */
 #if HAVE_SMPI
-    if (smpi_privatize_global_variables) {
+    if (smpi_privatize_global_variables == SMPI_PRIVATIZE_MMAP) {
       if (parent_process->pid != 0) {
         SIMIX_segment_index_set(process, parent_process->segment_index);
       } else {
@@ -258,6 +278,10 @@ smx_actor_t SIMIX_process_create(
 
   /* Add properties */
   process->properties = properties;
+
+  /* Make sure that the process is initialized for simix, in case we are called from the Host::onCreation signal */
+  if (host->extension<simgrid::simix::Host>() == nullptr)
+    host->extension_set<simgrid::simix::Host>(new simgrid::simix::Host());
 
   /* Add the process to it's host process list */
   xbt_swag_insert(process, host->extension<simgrid::simix::Host>()->process_list);
@@ -302,7 +326,7 @@ smx_actor_t SIMIX_process_attach(const char* name, void* data, const char* hostn
     process->ppid = parent_process->pid;
     /* SMPI process have their own data segment and each other inherit from their father */
 #if HAVE_SMPI
-    if (smpi_privatize_global_variables) {
+    if (smpi_privatize_global_variables == SMPI_PRIVATIZE_MMAP) {
       if (parent_process->pid != 0) {
         SIMIX_segment_index_set(process, parent_process->segment_index);
       } else {
@@ -527,6 +551,7 @@ void simcall_HANDLER_process_set_host(smx_simcall_t simcall, smx_actor_t process
 {
   process->new_host = dest;
 }
+
 void SIMIX_process_change_host(smx_actor_t process, sg_host_t dest)
 {
   xbt_assert((process != nullptr), "Invalid parameters");
@@ -576,12 +601,13 @@ void SIMIX_process_resume(smx_actor_t process)
 {
   XBT_IN("process = %p", process);
 
-  if(process->context->iwannadie) {
+  if (process->context->iwannadie) {
     XBT_VERB("Ignoring request to suspend a process that is currently dying.");
     return;
   }
 
-  if(!process->suspended) return;
+  if (!process->suspended)
+    return;
   process->suspended = 0;
 
   /* resume the synchronization that was blocking the resumed process. */
@@ -695,6 +721,7 @@ static int SIMIX_process_join_finish(smx_process_exit_status_t status, smx_activ
     sleep->surf_sleep = nullptr;
   }
   sleep->unref();
+  // intrusive_ptr_release(process); // FIXME: We are leaking here. See comment in SIMIX_process_join()
   return 0;
 }
 
@@ -702,6 +729,12 @@ smx_activity_t SIMIX_process_join(smx_actor_t issuer, smx_actor_t process, doubl
 {
   smx_activity_t res = SIMIX_process_sleep(issuer, timeout);
   static_cast<simgrid::kernel::activity::ActivityImpl*>(res)->ref();
+  /* We are leaking the process here, but if we don't take the ref, we get a "use after free".
+   * The correct solution would be to derivate the type SynchroSleep into a SynchroProcessJoin,
+   * but the code is not clean enough for now for this.
+   * The C API should first be properly replaced with the C++ one, which is a fair amount of work.
+   */
+  intrusive_ptr_add_ref(process);
   SIMIX_process_on_exit(process, (int_f_pvoid_pvoid_t)SIMIX_process_join_finish, res);
   return res;
 }
@@ -832,7 +865,7 @@ xbt_dynar_t SIMIX_process_get_runnable()
 /**
  * \brief Returns the process from PID.
  */
-smx_actor_t SIMIX_process_from_PID(int PID)
+smx_actor_t SIMIX_process_from_PID(aid_t PID)
 {
   if (simix_global->process_list.find(PID) == simix_global->process_list.end())
     return nullptr;
@@ -852,22 +885,19 @@ xbt_dynar_t SIMIX_processes_as_dynar() {
 void SIMIX_process_on_exit_runall(smx_actor_t process) {
   s_smx_process_exit_fun_t exit_fun;
   smx_process_exit_status_t exit_status = (process->context->iwannadie) ? SMX_EXIT_FAILURE : SMX_EXIT_SUCCESS;
-  while (!xbt_dynar_is_empty(process->on_exit)) {
-    exit_fun = xbt_dynar_pop_as(process->on_exit,s_smx_process_exit_fun_t);
+  while (!process->on_exit.empty()) {
+    exit_fun = process->on_exit.back();
     (exit_fun.fun)((void*)exit_status, exit_fun.arg);
+    process->on_exit.pop_back();
   }
 }
 
 void SIMIX_process_on_exit(smx_actor_t process, int_f_pvoid_pvoid_t fun, void *data) {
   xbt_assert(process, "current process not found: are you in maestro context ?");
 
-  if (!process->on_exit) {
-    process->on_exit = xbt_dynar_new(sizeof(s_smx_process_exit_fun_t), nullptr);
-  }
-
   s_smx_process_exit_fun_t exit_fun = {fun, data};
 
-  xbt_dynar_push_as(process->on_exit,s_smx_process_exit_fun_t,exit_fun);
+  process->on_exit.push_back(exit_fun);
 }
 
 /**

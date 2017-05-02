@@ -1,48 +1,48 @@
-/* Functions related to the java host instances.                            */
+/* Java bindings of the NetZones.                                           */
 
-/* Copyright (c) 2007-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include <xbt/str.h>
-#include <xbt/dict.h>
-#include <xbt/dynar.h>
-
+#include "simgrid/s4u/Host.hpp"
 #include "simgrid/s4u/NetZone.hpp"
-#include <simgrid/s4u/host.hpp>
+#include "src/kernel/routing/NetZoneImpl.hpp"
 
-#include "simgrid/msg.h"
 #include "jmsg_as.h"
 #include "jmsg_host.h"
 #include "jxbt_utilities.h"
 #include "jmsg.h"
 
-XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(jmsg);
+XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(java);
+
+SG_BEGIN_DECL()
 
 static jmethodID jas_method_As_constructor;
 static jfieldID jas_field_As_bind;
 
-jobject jas_new_instance(JNIEnv * env) {
+jobject jnetzone_new_instance(JNIEnv* env)
+{
   jclass cls = jxbt_get_class(env, "org/simgrid/msg/As");
   return env->NewObject(cls, jas_method_As_constructor);
 }
 
-jobject jas_ref(JNIEnv * env, jobject jas) {
+jobject jnetzone_ref(JNIEnv* env, jobject jas)
+{
   return env->NewGlobalRef(jas);
 }
 
-void jas_unref(JNIEnv * env, jobject jas) {
+void jnetzone_unref(JNIEnv* env, jobject jas)
+{
   env->DeleteGlobalRef(jas);
 }
 
-void jas_bind(jobject jas, simgrid::s4u::NetZone* netzone, JNIEnv* env)
+void jnetzone_bind(jobject jas, simgrid::s4u::NetZone* netzone, JNIEnv* env)
 {
   env->SetLongField(jas, jas_field_As_bind, (jlong)(uintptr_t)(netzone));
 }
 
-simgrid::s4u::NetZone* jas_get_native(JNIEnv* env, jobject jas)
+simgrid::s4u::NetZone* jnetzone_get_native(JNIEnv* env, jobject jas)
 {
   return (simgrid::s4u::NetZone*)(uintptr_t)env->GetLongField(jas, jas_field_As_bind);
 }
@@ -57,46 +57,39 @@ JNIEXPORT void JNICALL Java_org_simgrid_msg_As_nativeInit(JNIEnv* env, jclass cl
 }
 
 JNIEXPORT jobject JNICALL Java_org_simgrid_msg_As_getName(JNIEnv * env, jobject jas) {
-  simgrid::s4u::NetZone* as = jas_get_native(env, jas);
+  simgrid::s4u::NetZone* as = jnetzone_get_native(env, jas);
   return env->NewStringUTF(as->name());
 }
 
 JNIEXPORT jobjectArray JNICALL Java_org_simgrid_msg_As_getSons(JNIEnv * env, jobject jas) {
   int index = 0;
   jobjectArray jtable;
-  jobject tmp_jas;
-  simgrid::s4u::NetZone* tmp_as;
-  simgrid::s4u::NetZone* self_as = jas_get_native(env, jas);
+  sg_netzone_t self_as = jnetzone_get_native(env, jas);
 
-  xbt_dict_t dict = self_as->children();
-  int count = xbt_dict_length(dict);
   jclass cls = env->FindClass("org/simgrid/msg/As");
 
   if (!cls)
     return nullptr;
 
-  jtable = env->NewObjectArray(static_cast<jsize>(count), cls, nullptr);
+  jtable = env->NewObjectArray(static_cast<jsize>(self_as->children()->size()), cls, nullptr);
 
   if (!jtable) {
     jxbt_throw_jni(env, "Hosts table allocation failed");
     return nullptr;
   }
 
-  xbt_dict_cursor_t cursor=nullptr;
-  char *key;
-
-  xbt_dict_foreach(dict,cursor,key,tmp_as) {
-    tmp_jas = jas_new_instance(env);
+  for (auto tmp_as : *self_as->children()) {
+    jobject tmp_jas = jnetzone_new_instance(env);
     if (!tmp_jas) {
       jxbt_throw_jni(env, "java As instantiation failed");
       return nullptr;
     }
-    tmp_jas = jas_ref(env, tmp_jas);
+    tmp_jas = jnetzone_ref(env, tmp_jas);
     if (!tmp_jas) {
       jxbt_throw_jni(env, "new global ref allocation failed");
       return nullptr;
     }
-    jas_bind(tmp_jas, tmp_as, env);
+    jnetzone_bind(tmp_jas, tmp_as, env);
 
     env->SetObjectArrayElement(jtable, index, tmp_jas);
     index++;
@@ -105,7 +98,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_simgrid_msg_As_getSons(JNIEnv * env, job
 }
 
 JNIEXPORT jobject JNICALL Java_org_simgrid_msg_As_getProperty(JNIEnv *env, jobject jas, jobject jname) {
-  simgrid::s4u::NetZone* as = jas_get_native(env, jas);
+  simgrid::s4u::NetZone* as = jnetzone_get_native(env, jas);
 
   if (!as) {
     jxbt_throw_notbound(env, "as", jas);
@@ -130,27 +123,22 @@ JNIEXPORT jobjectArray JNICALL Java_org_simgrid_msg_As_getHosts(JNIEnv * env, jo
   jobjectArray jtable;
   jobject jhost;
   jstring jname;
-  msg_host_t host;
-  simgrid::s4u::NetZone* as = jas_get_native(env, jas);
-
-  xbt_dynar_t table = as->hosts();
-  int count = xbt_dynar_length(table);
+  simgrid::s4u::NetZone* as = jnetzone_get_native(env, jas);
 
   jclass cls = jxbt_get_class(env, "org/simgrid/msg/Host");
-
+  std::vector<sg_host_t>* table = as->hosts();
   if (!cls)
     return nullptr;
 
-  jtable = env->NewObjectArray(static_cast<jsize>(count), cls, nullptr);
+  jtable = env->NewObjectArray(static_cast<jsize>(table->size()), cls, nullptr);
 
   if (!jtable) {
     jxbt_throw_jni(env, "Hosts table allocation failed");
     return nullptr;
   }
 
-  for (int index = 0; index < count; index++) {
-    host = xbt_dynar_get_as(table,index,msg_host_t);
-
+  int index = 0;
+  for (auto host : *table) {
     jhost = static_cast<jobject>(host->extension(JAVA_HOST_LEVEL));
     if (!jhost) {
       jname = env->NewStringUTF(host->cname());
@@ -161,7 +149,9 @@ JNIEXPORT jobjectArray JNICALL Java_org_simgrid_msg_As_getHosts(JNIEnv * env, jo
     }
 
     env->SetObjectArrayElement(jtable, index, jhost);
+    index++;
   }
-  xbt_dynar_free(&table);
   return jtable;
 }
+
+SG_END_DECL()

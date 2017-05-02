@@ -1,11 +1,10 @@
-/* Copyright (c) 2007-2010, 2012-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2007-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#ifndef _SIMIX_IO_PRIVATE_H
-#define _SIMIX_IO_PRIVATE_H
+#ifndef SIMIX_IO_PRIVATE_H
+#define SIMIX_IO_PRIVATE_H
 
 #include <xbt/base.h>
 
@@ -34,9 +33,6 @@ XBT_PRIVATE sg_size_t SIMIX_file_tell(smx_actor_t process, smx_file_t fd);
 XBT_PRIVATE xbt_dynar_t SIMIX_file_get_info(smx_actor_t process, smx_file_t fd);
 XBT_PRIVATE int SIMIX_file_seek(smx_actor_t process, smx_file_t fd, sg_offset_t offset, int origin);
 XBT_PRIVATE int SIMIX_file_move(smx_actor_t process, smx_file_t fd, const char* fullpath);
-
-XBT_PRIVATE sg_size_t SIMIX_storage_get_free_size(smx_actor_t process, smx_storage_t storage);
-XBT_PRIVATE sg_size_t SIMIX_storage_get_used_size(smx_actor_t process, smx_storage_t storage);
 
 XBT_PRIVATE xbt_dict_t SIMIX_storage_get_properties(smx_storage_t storage);
 

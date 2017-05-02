@@ -1,15 +1,20 @@
-/* Copyright (c) 2004-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2004-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Host.hpp"
+#include "simgrid/s4u/Storage.hpp"
 #include "src/msg/msg_private.h"
+#include "src/simix/ActorImpl.hpp"
+#include "src/simix/smx_host_private.h"
+
 
 XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg);
 
 simgrid::xbt::Extension<simgrid::s4u::Host, simgrid::MsgHostExt> simgrid::MsgHostExt::EXTENSION_ID;
+
+SG_BEGIN_DECL()
 
 int sg_storage_max_file_descriptors = 1024;
 
@@ -98,7 +103,7 @@ int MSG_get_host_number()
 }
 
 /** \ingroup m_host_management
- * \brief Return a dynar containing all the hosts declared at a given point of time
+ * \brief Return a dynar containing all the hosts declared at a given point of time (including VMs)
  * \remark The host order in the returned array is generally different from the host creation/declaration order in the
  *         XML platform (we use a hash table internally)
  */
@@ -136,12 +141,16 @@ int MSG_host_get_core_number(msg_host_t host) {
  * \brief Return the list of processes attached to an host.
  *
  * \param host a host
- * \return a swag with the attached processes
+ * \param whereto a dynar in which we should push processes living on that host
  */
-xbt_swag_t MSG_host_get_process_list(msg_host_t host)
+void MSG_host_get_process_list(msg_host_t host, xbt_dynar_t whereto)
 {
   xbt_assert((host != nullptr), "Invalid parameters");
-  return host->processes();
+  smx_actor_t actor = NULL;
+  xbt_swag_foreach(actor, host->extension<simgrid::simix::Host>()->process_list) {
+    msg_process_t p = actor->ciface();
+    xbt_dynar_push(whereto, &p);
+  }
 }
 
 /** \ingroup m_host_management
@@ -216,17 +225,6 @@ double MSG_host_get_power_peak_at(msg_host_t host, int pstate_index) {
 }
 
 /** \ingroup m_host_management
- * \brief Return the current speed of the processor (in flop/s)
- *
- * \param  host host to test
- * \return Returns the current processor speed
- */
-double MSG_host_get_current_power_peak(msg_host_t host) {
-  xbt_assert((host != nullptr), "Invalid parameters (host is nullptr)");
-  return host->getPstateSpeedCurrent();
-}
-
-/** \ingroup m_host_management
  * \brief Return the total count of pstates defined for a host. See also @ref SURF_plugin_energy.
  *
  * \param  host host to test
@@ -253,8 +251,7 @@ xbt_dict_t MSG_host_get_mounted_storage_list(msg_host_t host)
  */
 xbt_dynar_t MSG_host_get_attached_storage_list(msg_host_t host)
 {
-  xbt_assert((host != nullptr), "Invalid parameters");
-  return host->attachedStorages();
+  return sg_host_get_attached_storage_list(host);
 }
 
 /** \ingroup m_host_management
@@ -275,9 +272,11 @@ xbt_dict_t MSG_host_get_storage_content(msg_host_t host)
 
   xbt_dict_foreach(storage_list,cursor,mount_name,storage_name){
     storage = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib,storage_name));
-    xbt_dict_t content = simcall_storage_get_content(storage);
+    xbt_dict_t content = MSG_storage_get_content(storage);
     xbt_dict_set(contents,mount_name, content,nullptr);
   }
   xbt_dict_free(&storage_list);
   return contents;
 }
+
+SG_END_DECL()

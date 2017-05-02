@@ -1,23 +1,23 @@
 /* s4u::Engine Simulation Engine and global functions. */
 
-/* Copyright (c) 2006-2015. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2006-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "instr/instr_interface.h"
 #include "mc/mc.h"
+#include "simgrid/s4u/Engine.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "simgrid/s4u/Mailbox.hpp"
 #include "simgrid/s4u/NetZone.hpp"
-#include "simgrid/s4u/engine.hpp"
-#include "simgrid/s4u/host.hpp"
-#include "simgrid/s4u/storage.hpp"
+#include "simgrid/s4u/Storage.hpp"
 #include "simgrid/simix.h"
 #include "src/kernel/EngineImpl.hpp"
 #include "src/kernel/routing/NetPoint.hpp"
 #include "src/kernel/routing/NetZoneImpl.hpp"
 #include "src/surf/network_interface.hpp"
-#include "surf/surf.h"               // routing_platf. FIXME:KILLME. SOON
+#include "surf/surf.h" // routing_platf. FIXME:KILLME. SOON
 
 XBT_LOG_NEW_CATEGORY(s4u,"Log channels of the S4U (Simgrid for you) interface");
 
@@ -78,6 +78,19 @@ void Engine::loadDeployment(const char *deploy)
 {
   SIMIX_launch_application(deploy);
 }
+// FIXME: The following duplicates the content of s4u::Host
+extern std::map<std::string, simgrid::s4u::Host*> host_list;
+/** @brief Returns the amount of hosts in the platform */
+size_t Engine::hostCount()
+{
+  return host_list.size();
+}
+/** @brief Fills the passed list with all hosts found in the platform */
+void Engine::hostList(std::vector<Host*>* list)
+{
+  for (auto kv : host_list)
+    list->push_back(kv.second);
+}
 
 void Engine::run() {
   if (MC_is_active()) {
@@ -97,13 +110,11 @@ static s4u::NetZone* netzoneByNameRecursive(s4u::NetZone* current, const char* n
   if(!strcmp(current->name(), name))
     return current;
 
-  xbt_dict_cursor_t cursor = nullptr;
-  char *key;
-  NetZone_t elem;
-  xbt_dict_foreach(current->children(), cursor, key, elem) {
+  for (auto elem : *(current->children())) {
     simgrid::s4u::NetZone* tmp = netzoneByNameRecursive(elem, name);
-    if (tmp != nullptr )
-        return tmp;
+    if (tmp != nullptr) {
+      return tmp;
+    }
   }
   return nullptr;
 }
@@ -142,5 +153,10 @@ void Engine::netpointUnregister(simgrid::kernel::routing::NetPoint* point)
     delete point;
   });
 }
+
+bool Engine::isInitialized()
+{
+  return Engine::instance_ != nullptr;
 }
 }
+} // namespace

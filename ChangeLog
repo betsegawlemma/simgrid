@@ -1,19 +1,55 @@
-SimGrid (3.15) UNRELEASED; urgency=low
+SimGrid (3.16) UNRELEASED
+
+SimDag
+ - New and Backwards Compatibility break: 
+   SD_simulate_with_update (double how_long, xbt_dynar_t changed_tasks_dynar)
+   When one wants to get the list of tasks whose states have changed during a
+   simulation round, s/he has to allocate and free a dynar and use it as argument 
+   to this function. The former SD_simulate (double how_long) now returns void.
+
+SMPI
+ - New algorithm to privatize globals: dlopen, with dynamic loading tricks
+
+ XBT/Replay:
+  - New function xbt_replay_action_get():
+    Retrieve the function previously associated to an event type.
+
+ -- Release target: June 21 2017   -- Da SimGrid team <simgrid-devel@lists.gforge.inria.fr>
+
+SimGrid (3.15) stable; urgency=low
+
+ The Spring Release: continuous integration servers become green
+ We fixed even the transient bugs on all target architectures:
+   Linux (CentOS, Debian, Ubuntu, Fedora), Mac OSX (Mavericks, El Capitan)
+   Windows, FreeBSD, NetBSD.
 
  - Rename NetCards to NetPoints.
    This was intended to help NS3 users, but that's not a netcard.
    That's a point in the routing algorithm, let's avoid wrong simplifications.
 
  MSG
- - New function: MSG_process_yield()
+ - New: MSG_process_yield(). Stop and yield to other processes.
+ - New: MSG_process_daemon(). Daemon processes are automatically killed 
+   when the last non-daemon process terminates
+ - New: MSG_process_ref/unref(). Fiddle with the process refcounting.
  - Renamed MSG_energy_plugin_init() -> MSG_host_energy_plugin_init()
    to make room for the upcoming network energy plugin.
+ - Drop MSG_host_get_current_power_peak: duplicates MSG_host_get_speed
 
  Java
  - Ensure that an actor can kill itself with Process::exit()
  - Kill the obscure NativeException. Nobody want to survive the issues
    it denotes, so use JniException that is a RuntimeException (not to
-   be catched explicitely).
+   be caught explicitly).
+ - Partial bug fix in initialization. SimGrid flags on command line were 
+   consumed at C level but stayed in the original Java String[] args. 
+   This could mess users' args[i] if SG flags were not put at the end of
+   the command line.
+   The SimGrid flags are now removed from the Java arguments. However, 
+   the number of arguments REMAINS UNCHANGED. It is then UNSAFE to test
+   if args.length is greater than the number of YOUR OWN ARGUMENTS. 
+   It might be if you have --log or --cfg flags in the command line.
+ - Fix numerous memleaks all around the place. In particular, around VMs.
 
  S4U
  - New callbacks:
@@ -23,8 +59,53 @@ SimGrid (3.15) UNRELEASED; urgency=low
    - s4u::Host::onSpeedChange: when the pstate is changed, or when an
      event from the availability_file changes the avail speed.
  - Links are now usable from s4u
+ - New: Engine::hostList() and Engine::hostCount(). Still clumsy.
+ - New: Actor::suspend(), Actor::resume(), and Actor::migrate(new_host)
+ - New examples: The conversion of MSG examples to S4U has begun
+    - Actors: create, kill, migration, and suspend
+    - Applications: master-worker and token-ring
+    - Action replay: communications and storage
+ - Drop Host::getPstateSpeedCurrent() which duplicates Host::speed()
 
- -- target_date=March 20 2017 -- Da SimGrid team <simgrid-devel@lists.gforge.inria.fr>
+ SimDag
+ - Backwards Compatibility breaks
+    - The SD_route_get_list and SD_route_get_size functions have been removed. 
+      They are replaced by the unique 
+         void sg_host_route(sg_host_t src, sg_host_t dst, xbt_dynar_t links)
+      The route from src to dst is built in the links dynar whose size can 
+      be obtained with xbt_dynar_length.
+    - The SD_route_bandwidth and SD_route_latency functions have been replaced by
+        sg_host_route_bandwidth and sg_host_route_latency. 
+      Macros ensure the backwards compatibility, but you should fix your code
+
+ SMPI
+ - Major C++ rewrite ongoing (SMPI used to be C compiled in C++). 
+   This can break codes using SMPI internals (from private.h instead of the public smpi.h).
+ - Bump our claim of support from MPI 1.1 to MPI 2.2. 
+   We don't support 100% of it, but it should be enough. Contact us if not.
+ - MPI_Win_lock/unlock, MPI_Get_accumulate support added (as for all RMA, implementation is 
+   naive and probably inaccurate)
+ - New algorithm for SMPI_SHARED_MALLOC: global, where all blocks are
+   mapped onto a unique small file using some system magic.
+ - Bugfix: smpirun was sometimes misusing hostfile when wrongly terminated
+ - Fortran: cleanups, fixes, support of user-added operations
+ - RMA: MPI_Accumulate are applied in correct order.
+ - RMA:  MPI_Win_{complete/post} shouldn't miss messages anymore.
+ - Better support for MPI_IN_PLACE
+ - Support for MPI_Win attrs and keyvals.
+ - Support MPI_Comm_group_create, MPI_Type_size_x
+ - MPI ops should be properly applied to all allowed types
+ - Replace implementation of MPI_Bcast "scatter followed by rdb allgather"
+   algorithm by a non failing one from mpich.
+
+ XBT
+ - Kill the fifo data container: we don't use it anymore.
+
+ XML
+ - A <cluster> can now be created with different speed values to represent pstates.
+   see examples/platforms/energy_cluster.xml for an example.
+
+ -- Wed Mar 22 17:50:21 CET 2017 -- Da SimGrid team <simgrid-devel@lists.gforge.inria.fr>
 
 SimGrid (3.14.159) stable; urgency=low
 
@@ -48,7 +129,12 @@ SimGrid (3.14) stable; urgency=low
  * We now need python3 for our testing infrastructure.
  * Model checking needs libevent
 
+ MC
+ * Now works on FreeBSD
+
  SMPI
+ * Privatization now works on FreeBSD
+ 
  * Privatization is now activated by default in smpirun
    You can turn it off with -no-privatize if something goes wrong.
 
@@ -129,7 +215,7 @@ SimGrid (3.14) stable; urgency=low
 
  MSG:
  * Memory usage should be decreased for simulations with a large number 
-  of processes. This also helps for SMPI.
+   of processes. This also helps for SMPI.
 
  -- Sat Dec 24 22:34:26 CET 2016 Da SimGrid team <simgrid-devel@lists.gforge.inria.fr>
 

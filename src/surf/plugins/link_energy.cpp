@@ -77,8 +77,6 @@ void LinkEnergy::update()
   double start_time = this->last_updated;
   double finish_time = surf_get_clock();
   double link_load;
-  double uplink_load;
-  double downlink_load;
   
 //  link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
 
@@ -86,33 +84,20 @@ void LinkEnergy::update()
 
   double instantaneous_consumption;
 
-  char* lnk;
-  char* lnk_name;
 
-  lnk_name = link->name();
-  lnk_down = strstr(lnk_name,"_DOWN");
-  lnk_up = strstr(lnk_name,"_UP");
+  lnk_down = strstr(link->name(),"_DOWN");
+  lnk_up = strstr(link->name(),"_UP");
 
   if (link->isOff()){
     instantaneous_consumption = this->watts_off;
   }else if(lnk_down){
 
-    downlink_load = lmm_constraint_get_usage(link->pimpl_->constraint());
-
-    strncpy(lnk_down,"_UP\0",4);
-    up_link = link.byName(lnk_name);
-    uplink_load =  lmm_constraint_get_usage(up_link->pimpl_->constraint());  
-
-    link_load = downlink_load + uplink_load;
-    instantaneous_consumption = this->getCurrentWattsValue(link_load);
-
+    up_link->ext<LinkEnergy>->update();
+    return;
   }else if(lnk_up){
 
-    uplink_load = lmm_constraint_get_usage(link->pimpl_->constraint());
-
-    strncpy(lnk_up,"_DOWN\0",6);
-    down_link = link.byName(lnk_name);
-    downlink_load =  lmm_constraint_get_usage(down_link->pimpl_->constraint());  
+    double uplink_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+    double downlink_load =  lmm_constraint_get_usage(down_link->pimpl_->constraint());  
 
     link_load = downlink_load + uplink_load;
     instantaneous_consumption = this->getCurrentWattsValue(link_load);
@@ -120,6 +105,7 @@ void LinkEnergy::update()
   }else{
 
     link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+    instantaneous_consumption = this->getCurrentWattsValue(link_load);
 
   }
 
@@ -136,7 +122,22 @@ void LinkEnergy::update()
 LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) : link(ptr), last_updated(surf_get_clock())
 {
   initWattsRangeList();
+ 
+  char * lnk_down = strstr(lnk_name,"_DOWN");
+  char * lnk_up = strstr(lnk_name,"_UP");
 
+  if (lnk_down){
+    down_link = link.byName(lnk_name);
+    strncpy(lnk_down,"_UP",4);
+    up_link = link.byName(lnk_name);
+    
+   }else if(lnk_up){
+    up_link = link.byName(lnk_name);
+    strncpy(lnk_up,"_DOWN",6);
+    down_link = link.byName(lnk_name);
+  }
+ 
+    
   const char* off_power_str = link->property("watt_off");
   if (off_power_str != nullptr) {
     char* msg       = bprintf("Invalid value for property watt_off of link %s: %%s", link->name());

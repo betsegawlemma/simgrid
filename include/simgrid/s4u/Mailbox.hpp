@@ -1,4 +1,4 @@
-/* Copyright (c) 2006-2015. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2006-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -131,6 +131,9 @@ public:
 
   /** Returns whether the mailbox contains queued communications */
   bool empty();
+
+  /** Check if there is a communication going on in a mailbox. */
+  bool listen();
 
   /** Gets the first element in the queue (without dequeuing it), or nullptr if none is there */
   smx_activity_t front();

@@ -36,8 +36,27 @@ installBuildWrapper
 # triggers the compilation through the build wrapper to gather compilation database
 ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir bw-outputs "$@"
 
-# and finally execute the actual SonarQube analysis (the SONAR_TOKEN is set from the travis web interface, to not expose it)
+# Run ctest before sonar to gather coverage some information
+set +e
+ctest --output-on-failure
+outcome=$?
+set -e
+
+# Only run sonar on master (not on pull requests)
+if [ "$TRAVIS_PULL_REQUEST" != "false" ] ; then
+  exit $outcome
+fi
+
+# generate the gcov files
+ctest -D ExperimentalCoverage
+
+# and finally execute the actual SonarQube analysis 
+# (the SONAR_TOKEN is set from the travis web interface, to not expose it with an ongoing "set -x")
 # See https://docs.travis-ci.com/user/sonarqube/ for more info on tokens
 # don't show the token in the logs
 set +x
-sonar-scanner -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN
+sonar-scanner -Dsonar.host.url=https://sonarqube.com -Dsonar.login=$SONAR_TOKEN     \
+  | grep -v 'INFO: Parsing /home/travis/build/simgrid/simgrid/Testing/CoverageInfo' \
+  | grep -v 'WARN: File not analysed by Sonar, so ignoring coverage: /usr/include/'
+
+exit $outcome

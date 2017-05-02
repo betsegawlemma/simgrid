@@ -20,10 +20,11 @@ namespace s4u {
 class ConditionVariable;
 
 /** @brief A classical mutex, but blocking in the simulation world
+ *  @ingroup s4u_api
  *
- * It is strictly impossible to use a real mutex (such as
+ * It is strictly impossible to use a real mutex, such as
  * [std::mutex](http://en.cppreference.com/w/cpp/thread/mutex)
- * or [pthread_mutex_t](http://pubs.opengroup.org/onlinepubs/007908775/xsh/pthread_mutex_lock.html)),
+ * or [pthread_mutex_t](http://pubs.opengroup.org/onlinepubs/007908775/xsh/pthread_mutex_lock.html),
  * because it would block the whole simulation.
  * Instead, you should use the present class, that is a drop-in replacement of
  * [std::mutex](http://en.cppreference.com/w/cpp/thread/mutex).
@@ -33,8 +34,7 @@ class ConditionVariable;
  *
  */
 XBT_PUBLIC_CLASS Mutex {
-friend ConditionVariable;
-private:
+  friend ConditionVariable;
   friend simgrid::simix::Mutex;
   simgrid::simix::Mutex* mutex_;
   Mutex(simgrid::simix::Mutex* mutex) : mutex_(mutex) {}
@@ -62,7 +62,6 @@ public:
   /** Constructs a new mutex */
   static Ptr createMutex();
 
-public:
   void lock();
   void unlock();
   bool try_lock();

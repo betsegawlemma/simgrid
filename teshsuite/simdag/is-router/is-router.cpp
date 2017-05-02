@@ -1,10 +1,10 @@
-/* Copyright (c) 2008-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2008-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "simgrid/s4u/engine.hpp"
-#include "simgrid/s4u/host.hpp"
+#include "simgrid/s4u/Engine.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "simgrid/simdag.h"
 #include "src/kernel/routing/NetPoint.hpp"
 #include "surf/surf_routing.h"
@@ -29,8 +29,14 @@ int main(int argc, char **argv)
   sg_host_t host;
   xbt_dynar_foreach(hosts, it, host) {
     simgrid::kernel::routing::NetPoint* nc = host->pimpl_netpoint;
-    std::printf("   - Seen: \"%s\". Type: %s\n", host->cname(),
-                nc->isRouter() ? "router" : (nc->isNetZone() ? "netzone" : (nc->isHost() ? "host" : "buggy")));
+    const char *type = "buggy";
+    if (nc->isRouter())
+      type = "router";
+    if (nc->isNetZone())
+      type = "netzone";
+    if (nc->isHost())
+      type = "host";
+    std::printf("   - Seen: \"%s\". Type: %s\n", host->cname(), type);
   }
   xbt_dynar_free(&hosts);
 

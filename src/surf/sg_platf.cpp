@@ -1,8 +1,9 @@
+/* Copyright (c) 2006-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "simgrid/s4u/engine.hpp"
+#include "simgrid/s4u/Engine.hpp"
 
 #include "src/kernel/EngineImpl.hpp"
 #include "src/simix/smx_private.h"
@@ -24,10 +25,10 @@
 #include "src/kernel/routing/NetZoneImpl.hpp"
 #include "src/kernel/routing/TorusZone.hpp"
 #include "src/kernel/routing/VivaldiZone.hpp"
-
+#include <string>
 XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(surf_parse);
 
-XBT_PRIVATE xbt_dynar_t mount_list = nullptr;
+XBT_PRIVATE std::vector<s_mount_t> mount_list;
 
 namespace simgrid {
 namespace surf {
@@ -37,7 +38,15 @@ simgrid::xbt::signal<void(sg_platf_cluster_cbarg_t)> on_cluster;
 }
 }
 
+// FIXME: The following duplicates the content of s4u::Host
+namespace simgrid {
+namespace s4u {
+extern std::map<std::string, simgrid::s4u::Host*> host_list;
+}
+}
+
 static int surf_parse_models_setup_already_called = 0;
+std::map<std::string, storage_type_t> storage_types;
 
 /** The current AS in the parsing */
 static simgrid::kernel::routing::NetZoneImpl* current_routing = nullptr;
@@ -47,7 +56,8 @@ static simgrid::kernel::routing::NetZoneImpl* routing_get_current()
 }
 
 /** Module management function: creates all internal data structures */
-void sg_platf_init() {
+void sg_platf_init()
+{ /* Do nothing: just for symmetry of user code */
 }
 
 /** Module management function: frees all internal data structures */
@@ -66,7 +76,8 @@ void sg_platf_new_host(sg_platf_host_cbarg_t args)
   std::unordered_map<std::string, std::string> props;
   if (args->properties) {
     xbt_dict_cursor_t cursor=nullptr;
-    char *key,*data;
+    char *key;
+    char* data;
     xbt_dict_foreach (args->properties, cursor, key, data)
       props[key] = data;
     xbt_dict_free(&args->properties);
@@ -76,8 +87,7 @@ void sg_platf_new_host(sg_platf_host_cbarg_t args)
       routing_get_current()->createHost(args->id, &args->speed_per_pstate, args->core_amount, &props);
 
   host->pimpl_->storage_ = mount_list;
-  xbt_lib_set(storage_lib, args->id, ROUTING_STORAGE_HOST_LEVEL, static_cast<void*>(mount_list));
-  mount_list = nullptr;
+  mount_list.clear();
 
   /* Change from the defaults */
   if (args->state_trace)
@@ -115,22 +125,24 @@ simgrid::kernel::routing::NetPoint* sg_platf_new_router(const char* name, const 
   return netpoint;
 }
 
-void sg_platf_new_link(sg_platf_link_cbarg_t link){
-  std::vector<char*> names;
+void sg_platf_new_link(LinkCreationArgs* link)
+{
+  std::vector<std::string> names;
 
   if (link->policy == SURF_LINK_FULLDUPLEX) {
-    names.push_back(bprintf("%s_UP", link->id));
-    names.push_back(bprintf("%s_DOWN", link->id));
+    names.push_back(link->id+ "_UP");
+    names.push_back(link->id+ "_DOWN");
   } else {
-    names.push_back(xbt_strdup(link->id));
+    names.push_back(link->id);
   }
   for (auto link_name : names) {
     simgrid::surf::LinkImpl* l =
-        surf_network_model->createLink(link_name, link->bandwidth, link->latency, link->policy);
+        surf_network_model->createLink(link_name.c_str(), link->bandwidth, link->latency, link->policy);
 
     if (link->properties) {
       xbt_dict_cursor_t cursor = nullptr;
-      char *key, *data;
+      char* key;
+      char* data;
       xbt_dict_foreach (link->properties, cursor, key, data)
         l->setProperty(key, data);
       xbt_dict_free(&link->properties);
@@ -142,8 +154,6 @@ void sg_platf_new_link(sg_platf_link_cbarg_t link){
       l->setBandwidthTrace(link->bandwidth_trace);
     if (link->state_trace)
       l->setStateTrace(link->state_trace);
-
-    xbt_free(link_name);
   }
 }
 
@@ -155,8 +165,6 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
   using simgrid::kernel::routing::TorusZone;
 
   int rankId=0;
-
-  s_sg_platf_link_cbarg_t link;
 
   // What an inventive way of initializing the AS that I have as ancestor :-(
   s_sg_platf_AS_cbarg_t AS;
@@ -179,12 +187,12 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
   simgrid::kernel::routing::ClusterZone* current_as = static_cast<ClusterZone*>(routing_get_current());
   current_as->parse_specific_arguments(cluster);
 
-  if(cluster->loopback_bw!=0 || cluster->loopback_lat!=0){
+  if(cluster->loopback_bw > 0 || cluster->loopback_lat > 0){
     current_as->linkCountPerNode_++;
     current_as->hasLoopback_ = 1;
   }
 
-  if(cluster->limiter_link!=0){
+  if(cluster->limiter_link > 0){
     current_as->linkCountPerNode_++;
     current_as->hasLimiter_ = 1;
   }
@@ -193,14 +201,15 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
     char * host_id = bprintf("%s%d%s", cluster->prefix, i, cluster->suffix);
     char * link_id = bprintf("%s_link_%d", cluster->id, i);
 
-    XBT_DEBUG("<host\tid=\"%s\"\tpower=\"%f\">", host_id, cluster->speed);
+    XBT_DEBUG("<host\tid=\"%s\"\tpower=\"%f\">", host_id, cluster->speeds.front());
 
     s_sg_platf_host_cbarg_t host;
     memset(&host, 0, sizeof(host));
     host.id = host_id;
     if ((cluster->properties != nullptr) && (!xbt_dict_is_empty(cluster->properties))) {
       xbt_dict_cursor_t cursor=nullptr;
-      char *key,*data;
+      char *key;
+      char* data;
       host.properties = xbt_dict_new_homogeneous(free);
 
       xbt_dict_foreach(cluster->properties,cursor,key,data) {
@@ -208,7 +217,7 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
       }
     }
 
-    host.speed_per_pstate.push_back(cluster->speed);
+    host.speed_per_pstate = cluster->speeds;
     host.pstate = 0;
     host.core_amount = cluster->core_amount;
     host.coord = "";
@@ -226,11 +235,11 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
     //add a loopback link
     simgrid::surf::LinkImpl* linkUp   = nullptr;
     simgrid::surf::LinkImpl* linkDown = nullptr;
-    if(cluster->loopback_bw!=0 || cluster->loopback_lat!=0){
+    if(cluster->loopback_bw > 0 || cluster->loopback_lat > 0){
       char *tmp_link = bprintf("%s_loopback", link_id);
       XBT_DEBUG("<loopback\tid=\"%s\"\tbw=\"%f\"/>", tmp_link, cluster->loopback_bw);
 
-      memset(&link, 0, sizeof(link));
+      LinkCreationArgs link;
       link.id        = tmp_link;
       link.bandwidth = cluster->loopback_bw;
       link.latency   = cluster->loopback_lat;
@@ -247,17 +256,18 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
     //add a limiter link (shared link to account for maximal bandwidth of the node)
     linkUp   = nullptr;
     linkDown = nullptr;
-    if(cluster->limiter_link!=0){
+    if(cluster->limiter_link > 0){
       char *tmp_link = bprintf("%s_limiter", link_id);
       XBT_DEBUG("<limiter\tid=\"%s\"\tbw=\"%f\"/>", tmp_link, cluster->limiter_link);
 
-      memset(&link, 0, sizeof(link));
+      LinkCreationArgs link;
       link.id = tmp_link;
       link.bandwidth = cluster->limiter_link;
       link.latency = 0;
       link.policy = SURF_LINK_SHARED;
       sg_platf_new_link(&link);
-      linkUp = linkDown = simgrid::surf::LinkImpl::byName(tmp_link);
+      linkDown = simgrid::surf::LinkImpl::byName(tmp_link);
+      linkUp   = linkDown;
       free(tmp_link);
       current_as->privateLinks_.insert(
           {rankId * current_as->linkCountPerNode_ + current_as->hasLoopback_, {linkUp, linkDown}});
@@ -266,8 +276,7 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
     //call the cluster function that adds the others links
     if (cluster->topology == SURF_CLUSTER_FAT_TREE) {
       static_cast<FatTreeZone*>(current_as)->addProcessingNode(i);
-    }
-    else {
+    } else {
       current_as->create_links_for_node(cluster, i, rankId,
           rankId*current_as->linkCountPerNode_ + current_as->hasLoopback_ + current_as->hasLimiter_ );
     }
@@ -275,6 +284,7 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
     xbt_free(host_id);
     rankId++;
   }
+  xbt_dict_free(&cluster->properties);
 
   // Add a router.
   XBT_DEBUG(" ");
@@ -288,19 +298,18 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
   }
 
   //Make the backbone
-  if ((cluster->bb_bw != 0) || (cluster->bb_lat != 0)) {
+  if ((cluster->bb_bw > 0) || (cluster->bb_lat > 0)) {
 
-    memset(&link, 0, sizeof(link));
-    link.id        = bprintf("%s_backbone", cluster->id);
+    LinkCreationArgs link;
+    link.id        = std::string(cluster->id)+ "_backbone";
     link.bandwidth = cluster->bb_bw;
     link.latency   = cluster->bb_lat;
     link.policy    = cluster->bb_sharing_policy;
 
-    XBT_DEBUG("<link\tid=\"%s\" bw=\"%f\" lat=\"%f\"/>", link.id, cluster->bb_bw, cluster->bb_lat);
+    XBT_DEBUG("<link\tid=\"%s\" bw=\"%f\" lat=\"%f\"/>", link.id.c_str(), cluster->bb_bw, cluster->bb_lat);
     sg_platf_new_link(&link);
 
-    routing_cluster_add_backbone(simgrid::surf::LinkImpl::byName(link.id));
-    free((char*)link.id);
+    routing_cluster_add_backbone(simgrid::surf::LinkImpl::byName(link.id.c_str()));
   }
 
   XBT_DEBUG("</AS>");
@@ -309,6 +318,7 @@ void sg_platf_new_cluster(sg_platf_cluster_cbarg_t cluster)
   simgrid::surf::on_cluster(cluster);
   delete cluster->radicals;
 }
+
 void routing_cluster_add_backbone(simgrid::surf::LinkImpl* bb)
 {
   simgrid::kernel::routing::ClusterZone* cluster =
@@ -324,34 +334,30 @@ void routing_cluster_add_backbone(simgrid::surf::LinkImpl* bb)
 void sg_platf_new_cabinet(sg_platf_cabinet_cbarg_t cabinet)
 {
   for (int radical : *cabinet->radicals) {
-    char *hostname = bprintf("%s%d%s", cabinet->prefix, radical, cabinet->suffix);
+    std::string hostname = std::string(cabinet->prefix) + std::to_string(radical) + std::string(cabinet->suffix);
     s_sg_platf_host_cbarg_t host;
     memset(&host, 0, sizeof(host));
     host.pstate           = 0;
     host.core_amount      = 1;
-    host.id               = hostname;
+    host.id               = hostname.c_str();
     host.speed_per_pstate.push_back(cabinet->speed);
     sg_platf_new_host(&host);
 
-    s_sg_platf_link_cbarg_t link;
-    memset(&link, 0, sizeof(link));
+    LinkCreationArgs link;
     link.policy    = SURF_LINK_FULLDUPLEX;
     link.latency   = cabinet->lat;
     link.bandwidth = cabinet->bw;
-    link.id        = bprintf("link_%s",hostname);
+    link.id        = "link_" + hostname;
     sg_platf_new_link(&link);
-    free((char*)link.id);
 
     s_sg_platf_host_link_cbarg_t host_link;
     memset(&host_link, 0, sizeof(host_link));
-    host_link.id        = hostname;
-    host_link.link_up   = bprintf("link_%s_UP",hostname);
-    host_link.link_down = bprintf("link_%s_DOWN",hostname);
+    host_link.id        = hostname.c_str();
+    host_link.link_up   = bprintf("link_%s_UP",hostname.c_str());
+    host_link.link_down = bprintf("link_%s_DOWN",hostname.c_str());
     sg_platf_new_hostlink(&host_link);
     free((char*)host_link.link_up);
     free((char*)host_link.link_down);
-
-    free(hostname);
   }
   delete cabinet->radicals;
 }
@@ -361,50 +367,44 @@ void sg_platf_new_storage(sg_platf_storage_cbarg_t storage)
   xbt_assert(!xbt_lib_get_or_null(storage_lib, storage->id,ROUTING_STORAGE_LEVEL),
                "Refusing to add a second storage named \"%s\"", storage->id);
 
-  void* stype = xbt_lib_get_or_null(storage_type_lib, storage->type_id,ROUTING_STORAGE_TYPE_LEVEL);
-  xbt_assert(stype,"No storage type '%s'", storage->type_id);
+  xbt_assert(storage_types.find(storage->type_id) != storage_types.end(), "No storage type '%s'", storage->type_id);
+  storage_type_t stype = storage_types.at(storage->type_id);
 
-  XBT_DEBUG("ROUTING Create a storage name '%s' with type_id '%s' and content '%s'",
-      storage->id,
-      storage->type_id,
-      storage->content);
+  XBT_DEBUG("ROUTING Create a storage name '%s' with type_id '%s' and content '%s'", storage->id, storage->type_id,
+            storage->content);
 
   xbt_lib_set(storage_lib, storage->id, ROUTING_STORAGE_LEVEL, (void *) xbt_strdup(storage->type_id));
 
   // if storage content is not specified use the content of storage_type if any
-  if(!strcmp(storage->content,"") && strcmp(((storage_type_t) stype)->content,"")){
-    storage->content = ((storage_type_t) stype)->content;
-    storage->content_type = ((storage_type_t) stype)->content_type;
-    XBT_DEBUG("For disk '%s' content is empty, inherit the content (of type %s) from storage type '%s' ",
-        storage->id,((storage_type_t) stype)->content_type,
-        ((storage_type_t) stype)->type_id);
+  if (!strcmp(storage->content, "") && strcmp(stype->content, "")) {
+    storage->content      = stype->content;
+    storage->content_type = stype->content_type;
+    XBT_DEBUG("For disk '%s' content is empty, inherit the content (of type %s) from storage type '%s' ", storage->id,
+              stype->content_type, stype->type_id);
   }
 
   XBT_DEBUG("SURF storage create resource\n\t\tid '%s'\n\t\ttype '%s' "
-      "\n\t\tmodel '%s' \n\t\tcontent '%s'\n\t\tcontent_type '%s' "
-      "\n\t\tproperties '%p''\n",
-      storage->id,
-      ((storage_type_t) stype)->model,
-      ((storage_type_t) stype)->type_id,
-      storage->content,
-      storage->content_type,
-    storage->properties);
+            "\n\t\tmodel '%s' \n\t\tcontent '%s'\n\t\tcontent_type '%s' "
+            "\n\t\tproperties '%p''\n",
+            storage->id, stype->model, stype->type_id, storage->content, storage->content_type, storage->properties);
 
-  auto s = surf_storage_model->createStorage(storage->id, ((storage_type_t)stype)->type_id, storage->content,
-                                             storage->content_type, storage->attach);
+  auto s = surf_storage_model->createStorage(storage->id, stype->type_id, storage->content, storage->content_type,
+                                             storage->attach);
 
   if (storage->properties) {
     xbt_dict_cursor_t cursor = nullptr;
-    char *key, *data;
+    char *key;
+    char* data;
     xbt_dict_foreach (storage->properties, cursor, key, data)
       s->setProperty(key, data);
     xbt_dict_free(&storage->properties);
   }
 }
-void sg_platf_new_storage_type(sg_platf_storage_type_cbarg_t storage_type){
 
-  xbt_assert(!xbt_lib_get_or_null(storage_type_lib, storage_type->id,ROUTING_STORAGE_TYPE_LEVEL),
-               "Reading a storage type, processing unit \"%s\" already exists", storage_type->id);
+void sg_platf_new_storage_type(sg_platf_storage_type_cbarg_t storage_type)
+{
+  xbt_assert(storage_types.find(storage_type->id) == storage_types.end(),
+             "Reading a storage type, processing unit \"%s\" already exists", storage_type->id);
 
   storage_type_t stype = xbt_new0(s_storage_type_t, 1);
   stype->model = xbt_strdup(storage_type->model);
@@ -415,23 +415,10 @@ void sg_platf_new_storage_type(sg_platf_storage_type_cbarg_t storage_type){
   stype->size = storage_type->size;
   stype->model_properties = storage_type->model_properties;
 
-  XBT_DEBUG("ROUTING Create a storage type id '%s' with model '%s', "
-      "content '%s', and content_type '%s'",
-      stype->type_id,
-      stype->model,
-      storage_type->content,
-      storage_type->content_type);
+  XBT_DEBUG("ROUTING Create a storage type id '%s' with model '%s', content '%s', and content_type '%s'",
+            stype->type_id, stype->model, storage_type->content, storage_type->content_type);
 
-  xbt_lib_set(storage_type_lib,
-      stype->type_id,
-      ROUTING_STORAGE_TYPE_LEVEL,
-      (void *) stype);
-}
-
-static void mount_free(void *p)
-{
-  mount_t mnt = (mount_t) p;
-  xbt_free(mnt->name);
+  storage_types.insert({std::string(stype->type_id), stype});
 }
 
 void sg_platf_new_mount(sg_platf_mount_cbarg_t mount){
@@ -444,11 +431,9 @@ void sg_platf_new_mount(sg_platf_mount_cbarg_t mount){
   mnt.storage = surf_storage_resource_priv(surf_storage_resource_by_name(mount->storageId));
   mnt.name = xbt_strdup(mount->name);
 
-  if(!mount_list){
-    XBT_DEBUG("Create a Mount list for %s",A_surfxml_host_id);
-    mount_list = xbt_dynar_new(sizeof(s_mount_t), mount_free);
-  }
-  xbt_dynar_push(mount_list, &mnt);
+  if (mount_list.empty())
+    XBT_DEBUG("Create a Mount list for %s", A_surfxml_host_id);
+  mount_list.push_back(mnt);
 }
 
 void sg_platf_new_route(sg_platf_route_cbarg_t route)
@@ -466,25 +451,19 @@ void sg_platf_new_process(sg_platf_process_cbarg_t process)
   sg_host_t host = sg_host_by_name(process->host);
   if (!host) {
     // The requested host does not exist. Do a nice message to the user
-    char *tmp = bprintf("Cannot create process '%s': host '%s' does not exist\nExisting hosts: '",process->function, process->host);
-    xbt_strbuff_t msg = xbt_strbuff_new_from(tmp);
-    free(tmp);
-    xbt_dynar_t all_hosts = xbt_dynar_sort_strings(sg_hosts_as_dynar());
-    simgrid::s4u::Host* host;
-    unsigned int cursor;
-    xbt_dynar_foreach(all_hosts,cursor, host) {
-      xbt_strbuff_append(msg, host->cname());
-      xbt_strbuff_append(msg,"', '");
-      if (msg->used > 1024) {
-        msg->data[msg->used-3]='\0';
-        msg->used -= 3;
-
-        xbt_strbuff_append(msg," ...(list truncated)......");// That will be shortened by 3 chars when existing the loop
+    std::string msg = std::string("Cannot create process '") + process->function + "': host '" + process->host +
+                      "' does not exist\nExisting hosts: '";
+    for (auto kv : simgrid::s4u::host_list) {
+      simgrid::s4u::Host* host = kv.second;
+      msg += host->name();
+      msg += "', '";
+      if (msg.length() > 1024) {
+        msg.pop_back(); // remove trailing quote
+        msg += "...(list truncated)......";
         break;
       }
     }
-    msg->data[msg->used-3]='\0';
-    xbt_die("%s", msg->data);
+    xbt_die("%s", msg.c_str());
   }
   simgrid::simix::ActorCodeFactory& factory = SIMIX_get_actor_code_factory(process->function);
   xbt_assert(factory, "Function '%s' unknown", process->function);
@@ -637,7 +616,6 @@ simgrid::s4u::NetZone* sg_platf_new_AS_begin(sg_platf_AS_cbarg_t AS)
   _sg_cfg_init_status = 2; /* HACK: direct access to the global controlling the level of configuration to prevent
                             * any further config now that we created some real content */
 
-
   /* search the routing model */
   simgrid::kernel::routing::NetZoneImpl* new_as = nullptr;
   switch(AS->routing){
@@ -686,7 +664,7 @@ simgrid::s4u::NetZone* sg_platf_new_AS_begin(sg_platf_AS_cbarg_t AS)
     if (current_routing->hierarchy_ == simgrid::kernel::routing::NetZoneImpl::RoutingMode::unset)
       current_routing->hierarchy_ = simgrid::kernel::routing::NetZoneImpl::RoutingMode::recursive;
     /* add to the sons dictionary */
-    xbt_dict_set(current_routing->children(), AS->id, (void *) new_as, nullptr);
+    current_routing->children()->push_back(static_cast<simgrid::s4u::NetZone*>(new_as));
   }
 
   /* set the new current component of the tree */

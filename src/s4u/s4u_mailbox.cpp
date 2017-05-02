@@ -41,6 +41,11 @@ bool Mailbox::empty()
   return pimpl_->comm_queue.empty();
 }
 
+bool Mailbox::listen()
+{
+  return !this->empty() || (pimpl_->permanent_receiver && !pimpl_->done_comm_queue.empty());
+}
+
 smx_activity_t Mailbox::front()
 {
   return pimpl_->comm_queue.empty() ? nullptr : pimpl_->comm_queue.front();
@@ -54,9 +59,9 @@ void Mailbox::setReceiver(ActorPtr actor) {
 
 /** @brief get the receiver (process associated to the mailbox) */
 ActorPtr Mailbox::receiver() {
-  if(pimpl_->permanent_receiver == nullptr)
+  if (pimpl_->permanent_receiver == nullptr)
     return ActorPtr();
-  return ActorPtr(&pimpl_->permanent_receiver->getIface());
+  return pimpl_->permanent_receiver->iface();
 }
 
 }

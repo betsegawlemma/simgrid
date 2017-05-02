@@ -40,6 +40,7 @@ protected:
 
   explicit NetZone(NetZone * father, const char* name);
   virtual ~NetZone();
+  std::vector<Host*> hosts_;
 
 public:
   /** @brief Seal your netzone once you're done adding content, and before routing stuff through it */
@@ -47,8 +48,8 @@ public:
   char* name();
   NetZone* father();
 
-  xbt_dict_t children(); // Sub netzones
-  xbt_dynar_t hosts();   // my content as a dynar
+  std::vector<NetZone*>* children(); // Sub netzones
+  std::vector<Host*>* hosts(); // my content as a vector of hosts
 
   /** Get the properties assigned to a host */
   std::unordered_map<std::string, std::string>* properties();
@@ -79,7 +80,7 @@ private:
 
   bool sealed_ = false; // We cannot add more content when sealed
 
-  xbt_dict_t children_ = xbt_dict_new_homogeneous(nullptr); // sub-netzones
+  std::vector<NetZone*>* children_ = nullptr; // sub-netzones
 };
 }
 }; // Namespace simgrid::s4u

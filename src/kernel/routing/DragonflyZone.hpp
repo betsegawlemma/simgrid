@@ -68,10 +68,10 @@ public:
   void seal() override;
   void generateRouters();
   void generateLinks();
-  void createLink(char* id, int numlinks, surf::LinkImpl** linkup, surf::LinkImpl** linkdown);
-  unsigned int* rankId_to_coords(int rankId);
+  void createLink(std::string id, int numlinks, surf::LinkImpl** linkup, surf::LinkImpl** linkdown);
 
 private:
+  void rankId_to_coords(int rankId, unsigned int (*coords)[4]);
   sg_platf_cluster_cbarg_t cluster_;
   unsigned int numNodesPerBlade_    = 0;
   unsigned int numBladesPerChassis_ = 0;
