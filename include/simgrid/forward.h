@@ -43,17 +43,16 @@ namespace simgrid {
   }
 }
 
-<<<<<<< HEAD
 typedef simgrid::s4u::NetZone simgrid_NetZone;
 typedef simgrid::s4u::Host simgrid_Host;
 typedef simgrid::s4u::Link simgrid_Link;
 typedef simgrid::s4u::Link Link;
-=======
+
 typedef simgrid::s4u::Actor s4u_Actor;
 typedef simgrid::s4u::Host s4u_Host;
 typedef simgrid::s4u::Link s4u_Link;
 typedef simgrid::s4u::NetZone s4u_NetZone;
->>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
+
 typedef simgrid::kernel::activity::ActivityImpl kernel_Activity;
 typedef simgrid::kernel::routing::NetPoint routing_NetPoint;
 typedef simgrid::surf::Resource surf_Resource;
@@ -72,15 +71,17 @@ typedef struct Trace tmgr_Trace;
 
 #endif
 
-<<<<<<< HEAD
 typedef simgrid_NetZone* NetZone_t;
 typedef simgrid_Host* sg_host_t;
 typedef Link* sg_link_t;
-=======
+
 typedef s4u_NetZone* sg_netzone_t;
-typedef s4u_Host* sg_host_t;
-typedef s4u_Link* sg_link_t;
->>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
+//typedef s4u_Host* sg_host_t;
+//typedef s4u_Link* sg_link_t;
+
+//typedef s4u_NetZone* sg_netzone_t;
+//typedef s4u_Host* sg_host_t;
+//typedef s4u_Link* sg_link_t;
 
 typedef kernel_Activity *smx_activity_t;
 
