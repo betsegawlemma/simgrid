@@ -71,13 +71,13 @@ typedef struct Trace tmgr_Trace;
 
 #endif
 
-typedef simgrid_NetZone* NetZone_t;
-typedef simgrid_Host* sg_host_t;
-typedef Link* sg_link_t;
+//typedef simgrid_NetZone* NetZone_t;
+//typedef simgrid_Host* sg_host_t;
+//typedef Link* sg_link_t;
 
 typedef s4u_NetZone* sg_netzone_t;
-//typedef s4u_Host* sg_host_t;
-//typedef s4u_Link* sg_link_t;
+typedef s4u_Host* sg_host_t;
+typedef s4u_Link* sg_link_t;
 
 //typedef s4u_NetZone* sg_netzone_t;
 //typedef s4u_Host* sg_host_t;
