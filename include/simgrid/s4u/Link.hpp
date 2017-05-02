@@ -6,26 +6,13 @@
 #ifndef S4U_LINK_HPP_
 #define S4U_LINK_HPP_
 
-#include <simgrid/link.h>
 #include <xbt/base.h>
-#include <xbt/signal.hpp>
-
 #include <unordered_map>
-
-<<<<<<< HEAD
-<<<<<<< HEAD
 #include "xbt/dict.h"
-
 #include "xbt/Extendable.hpp"
-
 #include "xbt/signal.hpp"
-
 #include "simgrid/link.h"
 
-=======
->>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
-=======
->>>>>>> upstream/master
 /***********
  * Classes *
  ***********/
