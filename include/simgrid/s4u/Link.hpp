@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #include "xbt/dict.h"
 
 #include "xbt/Extendable.hpp"
@@ -23,6 +24,8 @@
 
 =======
 >>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
+=======
+>>>>>>> upstream/master
 /***********
  * Classes *
  ***********/
@@ -36,13 +39,9 @@ namespace xbt {
 };
 namespace s4u {
 /** @brief A Link represents the network facilities between [hosts](\ref simgrid::s4u::Host) */
-<<<<<<< HEAD
+
 XBT_PUBLIC_CLASS Link : public simgrid::xbt::Extendable<Link>  {
 
-=======
-XBT_PUBLIC_CLASS Link
-{
->>>>>>> 8bb47960d8dc57e8c78ad93582682de25c6e901e
   friend simgrid::surf::LinkImpl;
 
   // Links are created from the NetZone, and destroyed by their private implementation when the simulation ends
