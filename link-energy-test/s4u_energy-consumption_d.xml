@@ -1,12 +1,14 @@
 <?xml version='1.0'?>
-<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid.dtd">
-<platform version="3">
+<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
+<platform version="4">
   <!-- The master process (with some arguments) -->
   <process host="Host0" function="master">
-     <argument value="1"/>       <!-- Number of tasks -->
-     <argument value="0"/>  <!-- Computation size of tasks -->
+     <argument value="0" /> <!-- Computation size of tasks -->
      <argument value="113E6"/>   <!-- Communication size of tasks -->
+     <argument value="1"/> <!-- Number of workers -->
   </process>
   <!-- The worker process (with no argument) -->
-  <process host="Host2" function="worker" on_failure="RESTART"/>
+  <process host="Host2" function="worker" on_failure="RESTART">
+    <argument value="0"/>
+  </process>
 </platform>
