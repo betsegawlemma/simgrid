@@ -6,7 +6,14 @@
 #include "simgrid/plugins/energy.h"
 #include "simgrid/simix.hpp"
 #include "src/surf/network_interface.hpp"
+#include "simgrid/s4u/Engine.hpp"
+
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <string>
 #include <utility>
+#include <vector>
+
 
 /** @addtogroup SURF_plugin_energy
 
@@ -31,7 +38,7 @@ To simulate the energy-related elements, first call the simgrid#energy#sg_link_e
 and then use the following function to retrieve the consumption of a given link: MSG_link_get_consumed_energy().
  */
 
-XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_energy, surf, "Logging specific to the SURF energy plugin");
+XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_link_energy, surf, "Logging specific to the SURF LinkEnergy plugin");
 
 
 namespace simgrid {
@@ -42,8 +49,7 @@ class PowerRange {
   double idle;
   double busy;
 
-  PowerRange(double idle, double busy) : idle(idle), busy(busy) {
-  }
+  PowerRange(double idle, double busy) : idle(idle), busy(busy) {}
 };
 
 class LinkEnergy {
@@ -77,27 +83,29 @@ void LinkEnergy::update()
   double start_time = this->last_updated;
   double finish_time = surf_get_clock();
   double link_load;
-  
-//  link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+  double uplink_load;
+  double downlink_load;
 
   double previous_energy = this->total_energy;
 
   double instantaneous_consumption;
 
-
-  lnk_down = strstr(link->name(),"_DOWN");
-  lnk_up = strstr(link->name(),"_UP");
+  char* lnk_down = strstr(link->name(),"_DOWN");
+  char* lnk_up = strstr(link->name(),"_UP");
 
   if (link->isOff()){
+
     instantaneous_consumption = this->watts_off;
+
   }else if(lnk_down){
 
-    up_link->ext<LinkEnergy>->update();
+    up_link->extension<simgrid::energy::LinkEnergy>()->update();
     return;
+
   }else if(lnk_up){
 
-    double uplink_load = lmm_constraint_get_usage(link->pimpl_->constraint());
-    double downlink_load =  lmm_constraint_get_usage(down_link->pimpl_->constraint());  
+     uplink_load = lmm_constraint_get_usage(up_link->pimpl_->constraint());
+     downlink_load =  lmm_constraint_get_usage(down_link->pimpl_->constraint());
 
     link_load = downlink_load + uplink_load;
     instantaneous_consumption = this->getCurrentWattsValue(link_load);
@@ -122,34 +130,43 @@ void LinkEnergy::update()
 LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) : link(ptr), last_updated(surf_get_clock())
 {
   initWattsRangeList();
- 
-  char * lnk_down = strstr(lnk_name,"_DOWN");
-  char * lnk_up = strstr(lnk_name,"_UP");
+
+  char *lnk_name;
+  lnk_name = link->name();
+
+  char *lnk_down = strstr(lnk_name,"_DOWN");
+  char *lnk_up = strstr(lnk_name,"_UP");
 
   if (lnk_down){
-    down_link = link.byName(lnk_name);
+
+    down_link = link->byName(lnk_name);
     strncpy(lnk_down,"_UP",4);
-    up_link = link.byName(lnk_name);
+    up_link = link->byName(lnk_name);
     
    }else if(lnk_up){
-    up_link = link.byName(lnk_name);
+
+    up_link = link->byName(lnk_name);
     strncpy(lnk_up,"_DOWN",6);
-    down_link = link.byName(lnk_name);
+    down_link = link->byName(lnk_name);
+
+  } else {
+	  up_link = link;
   }
  
     
   const char* off_power_str = link->property("watt_off");
+
   if (off_power_str != nullptr) {
+
     char* msg       = bprintf("Invalid value for property watt_off of link %s: %%s", link->name());
     this->watts_off = xbt_str_parse_double(off_power_str, msg);
     xbt_free(msg);
+
   }
   /* watts_off is 0 by default */
 }
 
 LinkEnergy::~LinkEnergy()=default;
-
-
 
 /** @brief Computes the power consumed by link according to its current load */
 double LinkEnergy::getCurrentWattsValue(double link_load)
@@ -221,6 +238,7 @@ void LinkEnergy::initWattsRangeList()
 
 }
 }
+
 using simgrid::energy::LinkEnergy;
 
 /* **************************** events  callback *************************** */
@@ -258,6 +276,7 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
 }
 
 /* **************************** Public interface *************************** */
+SG_BEGIN_DECL()
 /** \ingroup SURF_plugin_energy
  * \brief Enable energy plugin
  * \details Enable energy plugin to get joules consumption of each cpu. You should call this function before #MSG_init().
@@ -285,4 +304,4 @@ double sg_link_get_consumed_energy(sg_link_t link) {
     "The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
   return link->extension<LinkEnergy>()->getConsumedEnergy();
 }
-
+SG_END_DECL()
