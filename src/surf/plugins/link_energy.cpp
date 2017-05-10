@@ -90,29 +90,29 @@ void LinkEnergy::update()
 
   double instantaneous_consumption;
 
-  char* lnk_down = strstr(link->name(),"_DOWN");
-  char* lnk_up = strstr(link->name(),"_UP");
+  const char* lnk_down = strstr(link->name(),"_DOWN");
+  const char* lnk_up = strstr(link->name(),"_UP");
 
-  if (link->isOff()){
+  if (this->link->isOff()){
 
     instantaneous_consumption = this->watts_off;
 
   }else if(lnk_down){
 
-    up_link->extension<simgrid::energy::LinkEnergy>()->update();
+    this->up_link->extension<LinkEnergy>()->update();
     return;
 
   }else if(lnk_up){
 
-     uplink_load = lmm_constraint_get_usage(up_link->pimpl_->constraint());
-     downlink_load =  lmm_constraint_get_usage(down_link->pimpl_->constraint());
+     uplink_load = lmm_constraint_get_usage(this->up_link->pimpl_->constraint());
+     downlink_load =  lmm_constraint_get_usage(this->down_link->pimpl_->constraint());
 
     link_load = downlink_load + uplink_load;
     instantaneous_consumption = this->getCurrentWattsValue(link_load);
 
   }else{
 
-    link_load = lmm_constraint_get_usage(link->pimpl_->constraint());
+    link_load = lmm_constraint_get_usage(this->link->pimpl_->constraint());
     instantaneous_consumption = this->getCurrentWattsValue(link_load);
 
   }
@@ -124,7 +124,7 @@ void LinkEnergy::update()
 
   XBT_DEBUG(
       "[update_energy of %s] period=[%.2f-%.2f]; current power peak=%.0E flop/s; consumption change: %.2f J -> %.2f J",
-      link->name(), start_time, finish_time, link->bandwidth(), previous_energy, energy_this_step);
+      this->link->name(), start_time, finish_time, this->link->bandwidth(), previous_energy, energy_this_step);
 }
 
 LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) : link(ptr), last_updated(surf_get_clock())
@@ -132,29 +132,28 @@ LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) : link(ptr), last_updated(surf_g
   initWattsRangeList();
 
   char *lnk_name;
-  lnk_name = link->name();
-
+  lnk_name = const_cast<char*>(this->link->name());
   char *lnk_down = strstr(lnk_name,"_DOWN");
   char *lnk_up = strstr(lnk_name,"_UP");
 
   if (lnk_down){
 
-    down_link = link->byName(lnk_name);
+    this->down_link = this->link->byName(lnk_name);
     strncpy(lnk_down,"_UP",4);
-    up_link = link->byName(lnk_name);
+    this->up_link = this->link->byName(lnk_name);
     
    }else if(lnk_up){
 
-    up_link = link->byName(lnk_name);
+    this->up_link = this->link->byName(lnk_name);
     strncpy(lnk_up,"_DOWN",6);
-    down_link = link->byName(lnk_name);
+    this->down_link = this->link->byName(lnk_name);
 
   } else {
-	  up_link = link;
+	  this->up_link = this->link;
   }
  
     
-  const char* off_power_str = link->property("watt_off");
+  const char* off_power_str = this->link->property("watt_off");
 
   if (off_power_str != nullptr) {
 
@@ -171,7 +170,7 @@ LinkEnergy::~LinkEnergy()=default;
 /** @brief Computes the power consumed by link according to its current load */
 double LinkEnergy::getCurrentWattsValue(double link_load)
 {
-  xbt_assert(!power_range_watts_list.empty(), "No power range properties specified for link %s", link->name());
+  xbt_assert(!power_range_watts_list.empty(), "No power range properties specified for link %s", this->link->name());
 
   /* idle_power corresponds to the idle power (link load = 0) */
   /* full_power is the power consumed at 100% link load       */
@@ -202,15 +201,15 @@ double LinkEnergy::getCurrentWattsValue(double link_load)
 
 double LinkEnergy::getConsumedEnergy()
 {
-  if (last_updated < surf_get_clock()) // We need to simcall this as it modifies the environment
+  if (this->last_updated < surf_get_clock()) // We need to simcall this as it modifies the environment
     simgrid::simix::kernelImmediate(std::bind(&LinkEnergy::update, this));
 
-  return total_energy;
+  return this->total_energy;
 }
 
 void LinkEnergy::initWattsRangeList()
 {
-  const char* power_values_str = link->property("watts");
+  const char* power_values_str = this->link->property("watts");
   if (power_values_str == nullptr)
     return;
 
@@ -218,17 +217,17 @@ void LinkEnergy::initWattsRangeList()
 
     xbt_assert(xbt_dynar_length(power_values) == 2,
                "Power properties incorrectly defined - could not retrieve idle and full power values for link %s",
-               link->name());
+               this->link->name());
 
     /* idle_power corresponds to the idle power (link load = 0) */
     /* busy_power is the power consumed at 100% link load       */
-    char* msg_idle = bprintf("Invalid idle value for  on link %s: %%s", link->name());
-    char* msg_busy  = bprintf("Invalid max value for  on link %s: %%s", link->name());
+    char* msg_idle = bprintf("Invalid idle value for  on link %s: %%s", this->link->name());
+    char* msg_busy  = bprintf("Invalid max value for  on link %s: %%s", this->link->name());
     PowerRange range(
       xbt_str_parse_double(xbt_dynar_get_as(power_values, 0, char*), msg_idle),
       xbt_str_parse_double(xbt_dynar_get_as(power_values, 1, char*), msg_busy)
     );
-    power_range_watts_list.push_back(range);
+    this->power_range_watts_list.push_back(range);
     xbt_free(msg_idle);
     xbt_free(msg_busy);
 
@@ -248,13 +247,14 @@ static void onCreation(simgrid::s4u::Link& link) {
 
 static void onActionStateChange(simgrid::surf::NetworkAction* action, simgrid::surf::Action::State previous)
 {
-  for (simgrid::s4u::Link* link : action->links()) {
+  for (simgrid::surf::LinkImpl* link : action->links()) {
 
     if (link == nullptr)
       continue;
 
-    // Get the host_energy extension for the relevant host
-    LinkEnergy* link_energy = link->extension<LinkEnergy>();
+    // Get the link_energy extension for the relevant link
+    simgrid::s4u::Link* lnk = dynamic_cast<simgrid::s4u::Link*>(link);
+    LinkEnergy* link_energy = lnk->extension<LinkEnergy>();
 
     if (link_energy->last_updated < surf_get_clock())
       link_energy->update();

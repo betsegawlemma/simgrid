@@ -17,7 +17,10 @@ class Master {
 	double comp_size = 0; /* - Task compute cost    */
 	double comm_size = 0; /* - Task communication size */
 	long workers_count = 0; /* - Number of workers    */
-	simgrid::s4u::MailboxPtr mailbox = nullptr;
+	simgrid::s4u::MailboxPtr mailbox{};
+	simgrid::s4u::Host* src_host{};
+	simgrid::s4u::Host* dst_host{};
+	std::vector<simgrid::s4u::Link>* links{};
 
 public:
 	explicit Master(std::vector<std::string> args) {
@@ -32,12 +35,27 @@ public:
 	}
 
 	void operator()() {
+
+		src_host = simgrid::s4u::Host::by_name("Host0");
+		dst_host = simgrid::s4u::Host::by_name("Host2");
+
 		mailbox = simgrid::s4u::Mailbox::byName(std::string("task-0"));
 
 		/* - Send the task to the @ref worker */
 		char* payload = bprintf("%f", comp_size);
 		simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
 
+		src_host->routeTo(dst_host, links, 0);
+
+		for (auto link : *links) {
+			xbt_assert(!links->empty(),
+			             "You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
+			             src_host->cname(), dst_host->cname());
+			XBT_INFO(
+					"Sending  task-0 from \"%s\" to \"%s\" link \"%s\" bandwidth %ld energy",
+					src_host->cname(), dst_host->cname(), link->piface_.name(),
+					link->piface_.bandwidth());
+		}
 		XBT_INFO(
 				"All tasks have been dispatched. Let's tell everybody the computation is over.");
 
@@ -79,7 +97,6 @@ public:
 
 			xbt_free(res1);
 			simgrid::s4u::this_actor::execute(comp_size1);
-
 
 		}
 		XBT_INFO("I'm done. See you!");
