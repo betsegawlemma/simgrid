@@ -35,9 +35,12 @@ XBT_PUBLIC_CLASS Link : public simgrid::xbt::Extendable<Link>  {
   explicit Link(surf::LinkImpl* pimpl) : pimpl_(pimpl) {}
   virtual ~Link() = default;
   // The private implementation, that never changes
-  surf::LinkImpl* const pimpl_;
+ // surf::LinkImpl* const pimpl_;
 
 public:
+
+  surf::LinkImpl* pimpl_=nullptr;
+
   /** @brief Retrieve a link from its name */
   static Link* byName(const char* name);
 
