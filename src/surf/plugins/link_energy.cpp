@@ -135,8 +135,7 @@ LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) :
 		link(ptr), last_updated(surf_get_clock()) {
 	initWattsRangeList();
 
-	char *lnk_name;
-	lnk_name = const_cast<char*>(this->link->name());
+	char *lnk_name =xbt_strdup(this->link->name());
 	char *lnk_down = strstr(lnk_name, "_DOWN");
 	char *lnk_up = strstr(lnk_name, "_UP");
 
@@ -155,6 +154,7 @@ LinkEnergy::LinkEnergy(simgrid::s4u::Link *ptr) :
 	} else {
 		this->up_link = this->link;
 	}
+	free(lnk_name);
 
 	const char* off_power_str = this->link->property("watt_off");
 
@@ -254,8 +254,7 @@ static void onCreation(simgrid::s4u::Link& link) {
 	link.extension_set(new LinkEnergy(&link));
 }
 
-static void onActionStateChange(simgrid::surf::NetworkAction* action,
-		simgrid::surf::Action::State previous) {
+static void onActionStateChange(simgrid::surf::NetworkAction* action) {
 	for (simgrid::surf::LinkImpl* link : action->links()) {
 
 		if (link == nullptr)
