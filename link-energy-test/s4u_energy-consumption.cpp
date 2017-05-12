@@ -5,6 +5,7 @@
 
 #include "xbt/str.h"
 #include "xbt/sysdep.h"
+#include "simgrid/s4u/Link.hpp"
 #include <simgrid/s4u.hpp>
 #include <string>
 #include "simgrid/plugins/energy.h"
@@ -20,7 +21,7 @@ class Master {
 	simgrid::s4u::MailboxPtr mailbox{};
 	simgrid::s4u::Host* src_host{};
 	simgrid::s4u::Host* dst_host{};
-	std::vector<simgrid::s4u::Link>* links{};
+	std::vector<simgrid::s4u::Link*>* links{};
 
 public:
 	explicit Master(std::vector<std::string> args) {
@@ -45,16 +46,16 @@ public:
 		char* payload = bprintf("%f", comp_size);
 		simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
 
-		src_host->routeTo(dst_host, links, 0);
-
+		src_host->routeTo(dst_host, links, nullptr);
+		xbt_assert(!links->empty(),
+					             "You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
+					             src_host->cname(), dst_host->cname());
 		for (auto link : *links) {
-			xbt_assert(!links->empty(),
-			             "You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
-			             src_host->cname(), dst_host->cname());
+
 			XBT_INFO(
 					"Sending  task-0 from \"%s\" to \"%s\" link \"%s\" bandwidth %ld energy",
-					src_host->cname(), dst_host->cname(), link->piface_.name(),
-					link->piface_.bandwidth());
+					src_host->cname(), dst_host->cname(), link->name(),
+					link->bandwidth());
 		}
 		XBT_INFO(
 				"All tasks have been dispatched. Let's tell everybody the computation is over.");
