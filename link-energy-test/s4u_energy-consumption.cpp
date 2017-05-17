@@ -10,112 +10,117 @@
 #include <string>
 #include "simgrid/plugins/energy.h"
 
-XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_masterworker,
+XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_energyconsumption,
 		"Messages specific for this s4u example");
 
-class Master {
-//  long number_of_tasks             = 0; /* - Number of tasks      */
-	double comp_size = 0; /* - Task compute cost    */
-	double comm_size = 0; /* - Task communication size */
-	long workers_count = 0; /* - Number of workers    */
-	simgrid::s4u::MailboxPtr mailbox{};
-	simgrid::s4u::Host* src_host{};
-	simgrid::s4u::Host* dst_host{};
-	std::vector<simgrid::s4u::Link*>* links{};
+class Sender {
+
+	double traffic;
+	long workers_count; /* - Number of workers    */
+	simgrid::s4u::MailboxPtr mailbox { };
+	simgrid::s4u::Host* src_host { };
+	simgrid::s4u::Host* dst_host { };
+	std::vector<simgrid::s4u::Link*>* links { };
 
 public:
-	explicit Master(std::vector<std::string> args) {
-		xbt_assert(args.size() == 4,
-				"The master function expects 3 arguments from the XML deployment file");
+	explicit Sender(std::vector<std::string> args) {
+		xbt_assert(args.size() == 3,
+				"The master function expects 2 arguments from the XML deployment file");
 
-		comp_size = std::stod(args[1]);
-		comm_size = std::stod(args[2]);
-		workers_count = std::stol(args[3]);
-
-		XBT_INFO("Got some work to do");
+		traffic = std::stod(args[1]);
+		workers_count = std::stol(args[2]);
+		links = new std::vector<simgrid::s4u::Link*>();
+		src_host = simgrid::s4u::Host::by_name("Host0");
+		dst_host = simgrid::s4u::Host::by_name("Host2");
+		XBT_INFO("Worker count %ld", workers_count);
+		XBT_INFO("Traffic to be sent %f", traffic);
 	}
 
 	void operator()() {
 
-		src_host = simgrid::s4u::Host::by_name("Host0");
-		dst_host = simgrid::s4u::Host::by_name("Host2");
-
-		mailbox = simgrid::s4u::Mailbox::byName(std::string("task-0"));
+		mailbox = simgrid::s4u::Mailbox::byName(std::string("mail"));
 
 		/* - Send the task to the @ref worker */
-		char* payload = bprintf("%f", comp_size);
-		simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
+		char* payload = bprintf("%f", traffic);
 
 		src_host->routeTo(dst_host, links, nullptr);
+
 		xbt_assert(!links->empty(),
-					             "You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
-					             src_host->cname(), dst_host->cname());
+				"You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
+				src_host->cname(), dst_host->cname());
+		simgrid::s4u::this_actor::send(mailbox, payload, 0.0);
+		//simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
+		XBT_INFO("In Master --");
+
+
 		for (auto link : *links) {
 
+
+
 			XBT_INFO(
-					"Sending  task-0 from \"%s\" to \"%s\" link \"%s\" bandwidth %ld energy",
+					"Sending  task-0 from \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f",
 					src_host->cname(), dst_host->cname(), link->name(),
-					link->bandwidth());
+					link->bandwidth(),sg_link_get_consumed_energy(link));
 		}
-		XBT_INFO(
-				"All tasks have been dispatched. Let's tell everybody the computation is over.");
-
-		/* - Eventually tell all the workers to stop by sending a "finalize" task */
-		mailbox = simgrid::s4u::Mailbox::byName(std::string("task-0"));
-		simgrid::s4u::this_actor::send(mailbox, xbt_strdup("finalize"), 0);
-
+		XBT_INFO("Sender done");
 	}
 };
 
-class Worker {
-	long id = -1;
-	simgrid::s4u::MailboxPtr mailbox1 = nullptr;
-	double comm_size;
+class Receiver {
 
+	simgrid::s4u::MailboxPtr mailbox = nullptr;
+	std::vector<simgrid::s4u::Link*>* links { };
+	simgrid::s4u::Host* src_host { };
+	simgrid::s4u::Host* dst_host { };
 public:
-	explicit Worker(std::vector<std::string> args) {
-		xbt_assert(args.size() == 2,
+	explicit Receiver(std::vector<std::string> args) {
+		xbt_assert(args.size() == 1,
 				"The worker expects a single argument from the XML deployment file: "
 						"its worker ID (its numerical rank)");
-		id = std::stol(args[1]);
-		mailbox1 = simgrid::s4u::Mailbox::byName(std::string("task-0"));
+		links = new std::vector<simgrid::s4u::Link*>();
+		src_host = simgrid::s4u::Host::by_name("Host0");
+		dst_host = simgrid::s4u::Host::by_name("Host2");
+		mailbox = simgrid::s4u::Mailbox::byName("mail");
 
 	}
 
 	void operator()() {
-		while (1) { /* The worker waits in an infinite loop for tasks sent by the \ref master */
-			char* res1 = static_cast<char*>(simgrid::s4u::this_actor::recv(
-					mailbox1));
 
-			xbt_assert(res1 != nullptr, "MSG_task_get failed");
+		char* payload = static_cast<char*>(simgrid::s4u::this_actor::recv(
+				mailbox));
 
-			if (strcmp(res1, "finalize") == 0) { /* - Exit if 'finalize' is received */
-				xbt_free(res1);
-				break;
-			}
-			/*  - Otherwise, process the task */
-			double comp_size1 = std::stod(res1);
+		xbt_assert(payload != nullptr, "MSG_task_get failed");
 
-			xbt_free(res1);
-			simgrid::s4u::this_actor::execute(comp_size1);
+		XBT_INFO("I have received: %s", payload);
+		dst_host->routeTo(src_host, links, nullptr);
+		for (auto link : *links) {
 
+			XBT_INFO(
+					"Route from \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f",
+					src_host->cname(), dst_host->cname(), link->name(),
+					link->bandwidth(),sg_link_get_consumed_energy(link));
 		}
-		XBT_INFO("I'm done. See you!");
+
+		xbt_free(payload);
+
+		XBT_INFO("Receiver done!");
+
 	}
 };
 
 int main(int argc, char* argv[]) {
-	//sg_link_energy_plugin_init();
+
+	sg_link_energy_plugin_init();
+
 	simgrid::s4u::Engine* e = new simgrid::s4u::Engine(&argc, argv);
 	xbt_assert(argc > 2, "Usage: %s platform_file deployment_file\n"
-			"\tExample: %s msg_platform.xml msg_deployment.xml\n", argv[0],
+			"\tExample: %s s4uplatform.xml s4u_deployment.xml\n", argv[0],
 			argv[0]);
 
 	e->loadPlatform(argv[1]); /** - Load the platform description */
-	e->registerFunction<Master>("master");
-	e->registerFunction<Worker>("worker"); /** - Register the function to be executed by the processes */
+	e->registerFunction<Sender>("sender");
+	e->registerFunction<Receiver>("receiver"); /** - Register the function to be executed by the processes */
 	e->loadDeployment(argv[2]); /** - Deploy the application */
-
 	e->run(); /** - Run the simulation */
 
 	XBT_INFO("Simulation time %g", e->getClock());

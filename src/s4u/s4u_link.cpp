@@ -113,7 +113,7 @@ int Link::sharingPolicy()
 
 
 /** Retrieve the property value (or nullptr if not set) */
-const char*Link::property(const char*key) {
+const char* Link::property(const char* key) {
   return this->pimpl_->getProperty(key);
 }
 
