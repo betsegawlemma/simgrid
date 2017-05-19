@@ -70,7 +70,7 @@ public:
 private:
 
 	void initWattsRangeList();
-	void updateLinkLoad();
+	void updateLinkUsage();
 	double computeDynamicPower();
 	void computeTotalPower();
 
@@ -82,7 +82,7 @@ private:
 	std::map<const char*, double> a_link_total_power { };
 
 	double last_updated { 0.0 }; /*< Timestamp of the last energy update event*/
-	double link_load { 0.0 };
+	double link_usage { 0.0 };
 
 };
 
@@ -120,7 +120,7 @@ LinkEnergy::~LinkEnergy() = default;
 /* Computes the consumption so far.  Called lazily on need. */
 void LinkEnergy::update() {
 
-	updateLinkLoad();
+	updateLinkUsage();
 
 	double start_time = this->last_updated;
 	double finish_time = surf_get_clock();
@@ -133,34 +133,34 @@ void LinkEnergy::update() {
 	XBT_INFO(
 			"[update: Link: %s] period=[%.2f-%.2f], bandwidth %f, load %f, a_link_total_power %f",
 			this->link->name(), start_time, finish_time,
-			this->link->bandwidth(), this->link_load, alink_total_power);
+			this->link->bandwidth(), this->link_usage, alink_total_power);
 }
 
-void LinkEnergy::updateLinkLoad() {
+void LinkEnergy::updateLinkUsage() {
 
-	double uplink_load;
-	double downlink_load;
+	double uplink_usage;
+	double downlink_usage;
 
 	const char* lnk_down = strstr(link->name(), "_DOWN");
 	const char* lnk_up = strstr(link->name(), "_UP");
 
 	if (lnk_down) {
 
-		this->up_link->extension<LinkEnergy>()->updateLinkLoad();
+		this->up_link->extension<LinkEnergy>()->updateLinkUsage();
 
 	} else if (lnk_up) {
 
-		uplink_load = lmm_constraint_get_usage(
+		uplink_usage = lmm_constraint_get_usage(
 				this->up_link->pimpl_->constraint());
 
-		downlink_load = lmm_constraint_get_usage(
+		downlink_usage = lmm_constraint_get_usage(
 				this->down_link->pimpl_->constraint());
 
-		this->link_load = downlink_load + uplink_load;
+		this->link_usage = downlink_usage + uplink_usage;
 
 	} else {
 
-		this->link_load = lmm_constraint_get_usage(
+		this->link_usage = lmm_constraint_get_usage(
 				this->up_link->pimpl_->constraint());
 
 	}
@@ -228,9 +228,9 @@ double LinkEnergy::computeDynamicPower() {
 	double watt_idle = range.watt_idle;
 	double power_slope = watt_busy - watt_idle;
 
-	if (this->link_load > 0) { /* Something is going on, the link is not idle */
+	if (this->link_usage > 0) { /* Something is going on, the link is not idle */
 
-		dynamic_power = (this->link_load / this->up_link->bandwidth())
+		dynamic_power = (this->link_usage / this->up_link->bandwidth())
 				* power_slope;
 
 	} else { /* Our machine is idle, take the dedicated value! */
@@ -241,7 +241,7 @@ double LinkEnergy::computeDynamicPower() {
 	XBT_INFO(
 			"[computeDynamicPower:%s] idle_power=%f, busy_power=%f, slope=%f, dynamic_power=%f, link_load=%f",
 			this->up_link->name(), watt_idle, watt_busy, power_slope,
-			dynamic_power, this->link_load);
+			dynamic_power, this->link_usage);
 
 	return dynamic_power;
 }
@@ -300,12 +300,12 @@ static void onLinkStateChange(simgrid::s4u::Link &link) {
 }
 
 static void onLinkDestruction(simgrid::s4u::Link& link) {
-	XBT_INFO("onLinkDestruction is called");
+	XBT_INFO("onLinkDestruction is called for link: %s", link.name());
 
 	LinkEnergy *link_energy = link.extension<LinkEnergy>();
 	link_energy->update();
 	link_energy->deletePowerValue(&link);
-	XBT_INFO("onLinkDestruction: Total power of link: %s is: %f Watt", link.name(),link_energy->getALinkTotalPower(&link));
+	XBT_DEBUG("onLinkDestruction: Total power of link: %s is: %f Watt", link.name(),link_energy->getALinkTotalPower(&link));
 }
 static void onCommunicate(simgrid::surf::NetworkAction* action,
 		simgrid::s4u::Host* src, simgrid::s4u::Host* dst) {
