@@ -164,6 +164,23 @@ void Link::setLatencyTrace(tmgr_trace_t trace)
   });
 }
 
+sg_link_t* Link::listLink()
+{
+  simgrid::surf::LinkImpl** list = simgrid::surf::LinkImpl::linksList();
+  sg_link_t* res                 = (sg_link_t*)list; // Use the same memory area
+
+  int size = sg_link_count();
+  for (int i = 0; i < size; i++)
+    res[i] = &(list[i]->piface_); // Convert each entry into its interface
+
+  return res;
+}
+
+int Link::linkCount(){
+	return simgrid::surf::LinkImpl::linksCount();
+}
+
+
 /*************
  * Callbacks *
  *************/
