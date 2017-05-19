@@ -15,8 +15,9 @@ XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_energyconsumption,
 
 class Sender {
 
-	double traffic;
-	long workers_count; /* - Number of workers    */
+
+	double comm_size;
+
 	simgrid::s4u::MailboxPtr mailbox { };
 	simgrid::s4u::Host* src_host { };
 	simgrid::s4u::Host* dst_host { };
@@ -24,16 +25,15 @@ class Sender {
 
 public:
 	explicit Sender(std::vector<std::string> args) {
-		xbt_assert(args.size() == 3,
-				"The master function expects 2 arguments from the XML deployment file");
+		xbt_assert(args.size() == 2,
+				"The master function expects 1 arguments from the XML deployment file");
 
-		traffic = std::stod(args[1]);
-		workers_count = std::stol(args[2]);
+		comm_size = std::stod(args[1]);
+
 		links = new std::vector<simgrid::s4u::Link*>();
 		src_host = simgrid::s4u::Host::by_name("Host0");
 		dst_host = simgrid::s4u::Host::by_name("Host2");
-		XBT_INFO("Worker count %ld", workers_count);
-		XBT_INFO("Traffic to be sent %f", traffic);
+
 	}
 
 	void operator()() {
@@ -41,27 +41,18 @@ public:
 		mailbox = simgrid::s4u::Mailbox::byName(std::string("mail"));
 
 		/* - Send the task to the @ref worker */
-		char* payload = bprintf("%f", traffic);
+		char* payload = bprintf("%f", comm_size);
 
 		src_host->routeTo(dst_host, links, nullptr);
 
 		xbt_assert(!links->empty(),
 				"You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
 				src_host->cname(), dst_host->cname());
-		simgrid::s4u::this_actor::send(mailbox, payload, 0.0);
-		//simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
-		XBT_INFO("In Master --");
 
+		XBT_INFO("Sending traffic of size %f", comm_size);
 
-		for (auto link : *links) {
+		simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
 
-
-
-			XBT_INFO(
-					"Sending  task-0 from \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f",
-					src_host->cname(), dst_host->cname(), link->name(),
-					link->bandwidth(),sg_link_get_consumed_energy(link));
-		}
 		XBT_INFO("Sender done");
 	}
 };
@@ -72,8 +63,10 @@ class Receiver {
 	std::vector<simgrid::s4u::Link*>* links { };
 	simgrid::s4u::Host* src_host { };
 	simgrid::s4u::Host* dst_host { };
+
 public:
 	explicit Receiver(std::vector<std::string> args) {
+
 		xbt_assert(args.size() == 1,
 				"The worker expects a single argument from the XML deployment file: "
 						"its worker ID (its numerical rank)");
@@ -86,24 +79,16 @@ public:
 
 	void operator()() {
 
+		XBT_INFO("Receiving ...");
+
 		char* payload = static_cast<char*>(simgrid::s4u::this_actor::recv(
 				mailbox));
 
 		xbt_assert(payload != nullptr, "MSG_task_get failed");
 
-		XBT_INFO("I have received: %s", payload);
-		dst_host->routeTo(src_host, links, nullptr);
-		for (auto link : *links) {
-
-			XBT_INFO(
-					"Route from \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f",
-					src_host->cname(), dst_host->cname(), link->name(),
-					link->bandwidth(),sg_link_get_consumed_energy(link));
-		}
+		XBT_INFO("Receiver done, received traffic: %s",payload);
 
 		xbt_free(payload);
-
-		XBT_INFO("Receiver done!");
 
 	}
 };

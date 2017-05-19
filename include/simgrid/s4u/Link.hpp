@@ -82,6 +82,10 @@ public:
   void setLatencyTrace(tmgr_trace_t trace); /*< setup the trace file with latency events (peak latency changes due to
                                                external load). Trace must contain absolute values */
 
+  sg_link_t* listLink();
+
+  int linkCount();
+
   /* The signals */
   /** @brief Callback signal fired when a new Link is created */
   static simgrid::xbt::signal<void(s4u::Link&)> onCreation;

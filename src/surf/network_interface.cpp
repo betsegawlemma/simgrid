@@ -111,6 +111,7 @@ namespace simgrid {
       links->insert({name, this});
       XBT_DEBUG("Create link '%s'",name);
 
+
     }
 
     /** @brief use destroy() instead of this destructor */
