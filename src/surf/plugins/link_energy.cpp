@@ -63,16 +63,16 @@ public:
 
 	double getALinkTotalPower(sg_link_t link);
 	double getALinkTotalEnergy(sg_link_t link);
-	void deletePowerEnergyValue(sg_link_t link); /*< Timestamp of the last energy update event*/
+	void deletePowerEnergyValue(sg_link_t link); /*< When a link is destroyed clear power and energy value associated with it >*/
 	double getLastUpdated();
+	void initWattsRangeList();
 	void update();
 
 private:
 
-	void initWattsRangeList();
 	void updateLinkUsage();
-	double computeALinkDynamicPower(); /*< Compute power consumed as a result of data traffic >*/
-	void computeALinkTotalPower(); /*< Compute power consumed as a result of data traffic >*/
+	double computeALinkDynamicPower();
+	void computeALinkTotalPower();
 	void updateALinkTotalEnergy();
 	void initALinkTotalEnergy();
 
@@ -131,7 +131,8 @@ void LinkEnergy::update() {
 	XBT_DEBUG(
 			"[update: Link: %s], bandwidth %f, load %f, a_link_total_power %f, a_link_total_energy %f",
 			this->link->name(), this->link->bandwidth(), this->link_usage,
-			getALinkTotalPower(this->up_link),getALinkTotalEnergy(this->up_link));
+			getALinkTotalPower(this->up_link),
+			getALinkTotalEnergy(this->up_link));
 }
 
 void LinkEnergy::updateLinkUsage() {
@@ -240,20 +241,19 @@ double LinkEnergy::computeALinkDynamicPower() {
 
 	XBT_DEBUG(
 			"[computeDynamicPower:%s] idle_power=%f, busy_power=%f, slope=%f, dynamic_power=%f, link_load=%f",
-			this->up_link->name(), idle, busy, power_slope,
-			dynamic_power, this->link_usage);
+			this->up_link->name(), idle, busy, power_slope, dynamic_power,
+			this->link_usage);
 
 	return dynamic_power;
 }
 
 void LinkEnergy::computeALinkTotalPower() {
 
-	initWattsRangeList();
-
 	if (!strcmp(this->up_link->name(), "__loopback__"))
 		return;
 
-	this->a_link_total_power[this->up_link->name()] += computeALinkDynamicPower();
+	this->a_link_total_power[this->up_link->name()] +=
+			computeALinkDynamicPower();
 
 }
 
@@ -311,6 +311,21 @@ static void onCreation(simgrid::s4u::Link& link) {
 	link.extension_set(new LinkEnergy(&link));
 }
 
+static void onCommunicate(simgrid::surf::NetworkAction* action,
+		simgrid::s4u::Host* src, simgrid::s4u::Host* dst) {
+	XBT_DEBUG("onCommunicate is called");
+	for (simgrid::surf::LinkImpl* link : action->links()) {
+
+		if (link == nullptr)
+			continue;
+
+		// Get the link_energy extension for the relevant link
+		LinkEnergy* link_energy = link->piface_.extension<LinkEnergy>();
+		link_energy->initWattsRangeList();
+		link_energy->update();
+	}
+}
+
 static void onActionStateChange(simgrid::surf::NetworkAction* action) {
 	XBT_DEBUG("onActionStateChange is called");
 	for (simgrid::surf::LinkImpl* link : action->links()) {
@@ -323,6 +338,7 @@ static void onActionStateChange(simgrid::surf::NetworkAction* action) {
 		link_energy->update();
 	}
 }
+
 static void onLinkStateChange(simgrid::s4u::Link &link) {
 	XBT_DEBUG("onLinkStateChange is called");
 
@@ -339,20 +355,6 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
 	XBT_DEBUG("onLinkDestruction: Total power of link: %s is: %f Watt",
 			link.name(), link_energy->getALinkTotalPower(&link));
 }
-static void onCommunicate(simgrid::surf::NetworkAction* action,
-		simgrid::s4u::Host* src, simgrid::s4u::Host* dst) {
-	XBT_DEBUG("onCommunicate is called");
-	for (simgrid::surf::LinkImpl* link : action->links()) {
-
-		if (link == nullptr)
-			continue;
-
-		// Get the link_energy extension for the relevant link
-		LinkEnergy* link_energy = link->piface_.extension<LinkEnergy>();
-
-		link_energy->update();
-	}
-}
 
 static void onSimulationEnd() {
 	simgrid::s4u::Link* link = nullptr;
@@ -364,9 +366,6 @@ static void onSimulationEnd() {
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
 
-			bool link_was_used =
-					link_list[i]->extension<LinkEnergy>()->getLastUpdated()
-							!= 0.0;
 			double a_link_total_power =
 					link_list[i]->extension<LinkEnergy>()->getALinkTotalPower(
 							link_list[i]);
@@ -375,8 +374,7 @@ static void onSimulationEnd() {
 							link_list[i]);
 			total_power += a_link_total_power;
 			total_energy += a_link_total_energy;
-			if (link_was_used)
-				used_links_power += a_link_total_power;
+
 		}
 	}
 	XBT_INFO("onSimulationEnd: Total power: %f watts, Total energy: %f Joule ",
@@ -415,6 +413,6 @@ double sg_link_get_consumed_energy(sg_link_t link) {
 	xbt_assert(LinkEnergy::EXTENSION_ID.valid(),
 			"The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
 	LinkEnergy *link_energy = link->extension<LinkEnergy>();
-	return link_energy->getALinkTotalPower(link);
+	return link_energy->getALinkTotalEnergy(link);
 }
 SG_END_DECL()
