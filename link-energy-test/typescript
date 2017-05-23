@@ -1,0 +1,17 @@
+Script started on Mon 22 May 2017 03:20:40 PM CEST
+[0.000000] [xbt_cfg/INFO] Configuration change: Set 'network/model' to 'NS3'
+[Host0:sender:(0) 0.000000] [s4u_app_energyconsumption/INFO] Sending traffic of size 10.000000
+[Host2:receiver:(0) 0.000000] [s4u_app_energyconsumption/INFO] Receiving ...
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:47: [xbt_exception/CRITICAL] Uncaught exception std::out_of_range: vector::_M_range_check: __n (which is 2) >= this->size() (which is 0)
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:80: [xbt_exception/CRITICAL] Current backtrace:
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> simgrid::xbt::backtrace() at /home/betsegaw/simgrid/src/xbt/backtrace.cpp:79, 0x7f7ede3c4e3f
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> simgrid::xbt::handler() at /home/betsegaw/simgrid/src/xbt/exception.cpp:101, 0x7f7ede382888
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> std::rethrow_exception(std::__exception_ptr::exception_ptr) at ??:?, 0x7f7edde7c6b6
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> std::terminate() at ??:?, 0x7f7edde7c701
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> __cxa_throw at ??:?, 0x7f7edde7c919
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> std::__throw_out_of_range_fmt(char const*, ...) at ??:?, 0x7f7eddea53f7
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> std::vector<char*, std::allocator<char*> >::_M_range_check(unsigned long) const at /usr/include/c++/5/bits/stl_vector.h:803, 0x7f7ede23cd13
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> __base_ctor  at /home/betsegaw/simgrid/src/surf/network_ns3.cpp:296, 0x7f7ede23ce4e
+[0.000000] /home/betsegaw/simgrid/src/xbt/exception.cpp:82: [xbt_exception/CRITICAL]   -> SIMIX_comm_start(simgrid::kernel::activity::ActivityImpl*) [clone .constprop.581] at /home/betsegaw/simgrid/src/simix/smx_network.cpp:470, 0x7f7ede3e8d35
+
+Script done on Mon 22 May 2017 03:20:40 PM CEST

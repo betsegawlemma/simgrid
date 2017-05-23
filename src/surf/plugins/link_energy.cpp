@@ -65,7 +65,9 @@ public:
 	double getALinkTotalEnergy(sg_link_t link);
 	void deletePowerEnergyValue(sg_link_t link); /*< When a link is destroyed clear power and energy value associated with it >*/
 	double getLastUpdated();
+	double getCurrntTime();
 	void initWattsRangeList();
+	double getLinkUsage();
 	void update();
 
 private:
@@ -300,6 +302,14 @@ double LinkEnergy::getLastUpdated() {
 	return this->last_updated;
 }
 
+double LinkEnergy::getCurrntTime() {
+	return surf_get_clock();
+}
+
+double LinkEnergy::getLinkUsage() {
+	return this->link_usage;
+}
+
 }
 }
 
@@ -375,10 +385,17 @@ static void onSimulationEnd() {
 			total_power += a_link_total_power;
 			total_energy += a_link_total_energy;
 
+			const char* name = link_list[i]->name();
+
+			if (strcmp(name, "__loopback__")) {
+
+				XBT_INFO("%s\tUsage\t%f\tBandwidth\t%f", name,
+						link_list[i]->extension<LinkEnergy>()->getLinkUsage(),link_list[i]->bandwidth());
+			}
+
 		}
 	}
-	XBT_INFO("onSimulationEnd: Total power: %f watts, Total energy: %f Joule ",
-			total_power, total_energy);
+	XBT_INFO("Power\t%f\tEnergy\t%f", total_power, total_energy);
 	xbt_free(link_list);
 
 }
@@ -415,4 +432,19 @@ double sg_link_get_consumed_energy(sg_link_t link) {
 	LinkEnergy *link_energy = link->extension<LinkEnergy>();
 	return link_energy->getALinkTotalEnergy(link);
 }
+
+double sg_link_get_consumed_power(sg_link_t link) {
+	xbt_assert(LinkEnergy::EXTENSION_ID.valid(),
+			"The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
+	LinkEnergy *link_energy = link->extension<LinkEnergy>();
+	return link_energy->getALinkTotalPower(link);
+}
+
+double sg_link_get_usage(sg_link_t link) {
+	xbt_assert(LinkEnergy::EXTENSION_ID.valid(),
+			"The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
+	LinkEnergy *link_energy = link->extension<LinkEnergy>();
+	return link_energy->getLinkUsage();
+}
+
 SG_END_DECL()

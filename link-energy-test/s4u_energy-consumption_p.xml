@@ -10,15 +10,15 @@
       <prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
     </host>
 
-    <link id="LINK_HOST0" bandwidth="1000Mbps" latency="0">
+    <link id="LINK_HOST0" bandwidth="1000MBps" latency="10ms">
       <prop id = "watts" value="10.3581:10.7479" />
     </link>
 
-    <link id="SWITCH" bandwidth="1000Mbps" latency="0" sharing_policy="FATPIPE">
+    <link id="SWITCH" bandwidth="1000MBps" latency="10ms" sharing_policy="FATPIPE">
       <prop id = "watts" value="10.3581:10.7479" />
     </link>
 
-    <link id="LINK_HOST2" bandwidth="1000Mbps" latency="0">
+    <link id="LINK_HOST2" bandwidth="1000MBps" latency="10ms">
       <prop id = "watts" value="10.3581:10.7479" />
     </link>
     <route src="Host0" dst="Host2">
