@@ -25,6 +25,8 @@ XBT_PUBLIC(double) sg_host_get_wattmax_at(sg_host_t host, int pstate);
 
 XBT_PUBLIC(void) sg_link_energy_plugin_init();
 XBT_PUBLIC(double) sg_link_get_consumed_energy(sg_link_t link);
+XBT_PUBLIC(double) sg_link_get_consumped_power(sg_link_t link);
+XBT_PUBLIC(double) sg_link_get_usage(sg_link_t link);
 
 #define MSG_link_energy_plugin_init() sg_link_energy_plugin_init()
 #define MSG_link_get_consumed_energy(link) sg_link_get_consumed_energy(link)

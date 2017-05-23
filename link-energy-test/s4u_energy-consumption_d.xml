@@ -3,7 +3,7 @@
 <platform version="4">
   <!-- The master process (with some arguments) -->
   <process host="Host0" function="sender">
-     <argument value="10"/>   <!-- Comm size of tasks -->
+     <argument value="100MB"/>   <!-- Comm size of tasks -->
   </process>
   <!-- The worker process (with no argument) -->
   <process host="Host2" function="receiver" on_failure="RESTART">

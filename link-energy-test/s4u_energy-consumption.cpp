@@ -15,7 +15,6 @@ XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_energyconsumption,
 
 class Sender {
 
-
 	double comm_size;
 
 	simgrid::s4u::MailboxPtr mailbox { };
@@ -38,28 +37,29 @@ public:
 
 	void operator()() {
 
-		mailbox = simgrid::s4u::Mailbox::byName(std::string("mail"));
+		double total_energy = 0.0;
 
-		/* - Send the task to the @ref worker */
-		char* payload = bprintf("%f", comm_size);
+		for (int i = 0; i < 1; i++) {
 
-		src_host->routeTo(dst_host, links, nullptr);
+			mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 
-		xbt_assert(!links->empty(),
-				"You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
-				src_host->cname(), dst_host->cname());
+			/* - Send the task to the @ref worker */
+			char* payload = bprintf("%f", comm_size);
 
-		XBT_INFO("Sending traffic of size %f", comm_size);
+			XBT_INFO("Traffic\t%f",comm_size);
 
-		simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
+			simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
+		}
+		XBT_DEBUG("Sender done");
 
-		XBT_INFO("Sender done");
+		mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
+		simgrid::s4u::this_actor::send(mailbox, xbt_strdup("finalize"), 0);
 	}
 };
 
 class Receiver {
 
-	simgrid::s4u::MailboxPtr mailbox = nullptr;
+	simgrid::s4u::MailboxPtr mailbox { };
 	std::vector<simgrid::s4u::Link*>* links { };
 	simgrid::s4u::Host* src_host { };
 	simgrid::s4u::Host* dst_host { };
@@ -73,22 +73,44 @@ public:
 		links = new std::vector<simgrid::s4u::Link*>();
 		src_host = simgrid::s4u::Host::by_name("Host0");
 		dst_host = simgrid::s4u::Host::by_name("Host2");
-		mailbox = simgrid::s4u::Mailbox::byName("mail");
+		mailbox = {};
 
 	}
 
 	void operator()() {
 
-		XBT_INFO("Receiving ...");
+		XBT_DEBUG("Receiving ...");
+		double total_energy = 0.0;
+		while (1) {
+			mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 
-		char* payload = static_cast<char*>(simgrid::s4u::this_actor::recv(
-				mailbox));
+			char* res = static_cast<char*>(simgrid::s4u::this_actor::recv(mailbox));
+			xbt_assert(res != nullptr, "Some problem");
 
-		xbt_assert(payload != nullptr, "MSG_task_get failed");
+			if (strcmp(res, "finalize") == 0) { /* - Exit if 'finalize' is received */
+				xbt_free(res);
+				break;
+			}
+			xbt_free(res);
+		}
+		XBT_DEBUG("Receiver done");
 
-		XBT_INFO("Receiver done, received traffic: %s",payload);
+		src_host->routeTo(dst_host, links, nullptr);
 
-		xbt_free(payload);
+		xbt_assert(!links->empty(),
+				"You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
+				src_host->cname(), dst_host->cname());
+
+		/*	for (auto link : *links) {
+
+		 XBT_INFO("From \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f link usage %f",
+		 src_host->cname(), dst_host->cname(), link->name(),
+		 link->bandwidth(), sg_link_get_consumed_energy(link), sg_link_get_usage(link));
+		 total_energy += sg_link_get_consumed_energy(link);
+		 }
+		 XBT_INFO("Total energy from the receiver: %f", total_energy);
+
+		 */
 
 	}
 };
@@ -107,8 +129,6 @@ int main(int argc, char* argv[]) {
 	e->registerFunction<Receiver>("receiver"); /** - Register the function to be executed by the processes */
 	e->loadDeployment(argv[2]); /** - Deploy the application */
 	e->run(); /** - Run the simulation */
-
-	XBT_INFO("Simulation time %g", e->getClock());
 
 	return 0;
 }
