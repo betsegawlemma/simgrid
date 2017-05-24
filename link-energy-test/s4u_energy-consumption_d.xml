@@ -1,6 +1,7 @@
 <?xml version='1.0'?>
 <!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
-<platform version="4">
+<platform version="4.1">
+
   <!-- The master process (with some arguments) -->
   <process host="Host0" function="sender">
      <argument value="68E6"/>   <!-- Comm size of tasks -->
