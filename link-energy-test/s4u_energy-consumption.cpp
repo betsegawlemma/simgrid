@@ -46,7 +46,7 @@ public:
 			/* - Send the task to the @ref worker */
 			char* payload = bprintf("%f", comm_size);
 
-			XBT_INFO("Traffic %f",comm_size);
+			XBT_INFO("Traffic %f", comm_size);
 
 			simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
 		}
@@ -101,16 +101,15 @@ public:
 				"You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
 				src_host->cname(), dst_host->cname());
 
-		/*	for (auto link : *links) {
+		for (auto link : *links) {
 
-		 XBT_INFO("From \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f link usage %f",
-		 src_host->cname(), dst_host->cname(), link->name(),
-		 link->bandwidth(), sg_link_get_consumed_energy(link), sg_link_get_usage(link));
-		 total_energy += sg_link_get_consumed_energy(link);
-		 }
-		 XBT_INFO("Total energy from the receiver: %f", total_energy);
+			XBT_INFO("From \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f link usage %f",
+					src_host->cname(), dst_host->cname(), link->name(),
+					link->bandwidth(), sg_link_get_consumed_energy(link), sg_link_get_usage(link));
+			total_energy += sg_link_get_consumed_energy(link);
 
-		 */
+		}
+		XBT_INFO("Total energy from the receiver: %f", total_energy);
 
 	}
 };
