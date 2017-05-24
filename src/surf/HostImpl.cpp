@@ -106,28 +106,13 @@ HostImpl::HostImpl(s4u::Host* host) : piface_(host)
   piface_->pimpl_ = this;
 }
 
-/** @brief use destroy() instead of this destructor */
-HostImpl::~HostImpl()
-{
-  for (auto mnt : storage_)
-    xbt_free(mnt.name);
-}
-
 simgrid::surf::Storage* HostImpl::findStorageOnMountList(const char* mount)
 {
-  simgrid::surf::Storage* st = nullptr;
-
   XBT_DEBUG("Search for storage name '%s' on '%s'", mount, piface_->cname());
-  for (auto mnt : storage_) {
-    XBT_DEBUG("See '%s'", mnt.name);
-    if (!strcmp(mount, mnt.name)) {
-      st = static_cast<simgrid::surf::Storage*>(mnt.storage);
-      break;
-    }
-  }
-  if (!st)
+  if (storage_.find(mount) == storage_.end())
     xbt_die("Can't find mount '%s' for '%s'", mount, piface_->cname());
-  return st;
+
+  return storage_.at(mount);
 }
 
 xbt_dict_t HostImpl::getMountedStorageList()
@@ -136,8 +121,8 @@ xbt_dict_t HostImpl::getMountedStorageList()
   char* storage_name      = nullptr;
 
   for (auto mnt : storage_) {
-    storage_name = (char*)static_cast<simgrid::surf::Storage*>(mnt.storage)->cname();
-    xbt_dict_set(storage_list, mnt.name, storage_name, nullptr);
+    storage_name = (char*)mnt.second->cname();
+    xbt_dict_set(storage_list, mnt.first.c_str(), storage_name, nullptr);
   }
   return storage_list;
 }
@@ -152,7 +137,7 @@ void HostImpl::getAttachedStorageList(std::vector<const char*>* storages)
     if (xbt_lib_get_level(xbt_lib_get_elm_or_null(storage_lib, key), SURF_STORAGE_LEVEL) != nullptr) {
       simgrid::surf::Storage* storage = static_cast<simgrid::surf::Storage*>(
           xbt_lib_get_level(xbt_lib_get_elm_or_null(storage_lib, key), SURF_STORAGE_LEVEL));
-      if (!strcmp(static_cast<const char*>(storage->attach_), piface_->cname())) {
+      if (not strcmp(static_cast<const char*>(storage->attach_), piface_->cname())) {
         storages->push_back(storage->cname());
       }
     }
@@ -168,14 +153,13 @@ Action* HostImpl::open(const char* fullpath)
 
   XBT_DEBUG("Search for storage name for '%s' on '%s'", fullpath, piface_->cname());
   for (auto mnt : storage_) {
-    XBT_DEBUG("See '%s'", mnt.name);
-    std::string file_mount_name = std::string(fullpath).substr(0, strlen(mnt.name));
+    XBT_DEBUG("See '%s'", mnt.first.c_str());
+    std::string file_mount_name = std::string(fullpath).substr(0, mnt.first.size());
 
-    if (!strcmp(file_mount_name.c_str(), mnt.name) &&
-        strlen(mnt.name) > longest_prefix_length) { /* The current mount name is found in the full path and is
-                                                           bigger than the previous*/
-      longest_prefix_length = strlen(mnt.name);
-      st                    = static_cast<simgrid::surf::Storage*>(mnt.storage);
+    if (file_mount_name == mnt.first && mnt.first.length() > longest_prefix_length) {
+      /* The current mount name is found in the full path and is bigger than the previous*/
+      longest_prefix_length = mnt.first.length();
+      st                    = mnt.second;
     }
   }
   if (longest_prefix_length > 0) { /* Mount point found, split fullpath into mount_name and path+filename*/
@@ -212,7 +196,7 @@ Action* HostImpl::write(surf_file_t fd, sg_size_t size)
 
 int HostImpl::unlink(surf_file_t fd)
 {
-  if (!fd) {
+  if (not fd) {
     XBT_WARN("No such file descriptor. Impossible to unlink");
     return -1;
   } else {
@@ -254,7 +238,6 @@ xbt_dynar_t HostImpl::getInfo(surf_file_t fd)
   xbt_dynar_push_as(info, void*, fd->mount);
   xbt_dynar_push_as(info, void*, (void*)st->cname());
   xbt_dynar_push_as(info, void*, st->typeId_);
-  xbt_dynar_push_as(info, void*, st->contentType_);
 
   return info;
 }
@@ -284,7 +267,7 @@ int HostImpl::fileSeek(surf_file_t fd, sg_offset_t offset, int origin)
 int HostImpl::fileMove(surf_file_t fd, const char* fullpath)
 {
   /* Check if the new full path is on the same mount point */
-  if (!strncmp((const char*)fd->mount, fullpath, strlen(fd->mount))) {
+  if (not strncmp((const char*)fd->mount, fullpath, strlen(fd->mount))) {
     std::map<std::string, sg_size_t*>* content = findStorageOnMountList(fd->mount)->content_;
     if (content->find(fd->name) != content->end()) { // src file exists
       sg_size_t* psize     = content->at(std::string(fd->name));
