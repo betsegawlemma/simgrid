@@ -9,5 +9,7 @@
   <!-- The worker process (with no argument) -->
   <process host="Host2" function="receiver" on_failure="RESTART">
   </process>
+  <process host="Host2" function="terminator" on_failure="RESTART">
+  </process>
   
 </platform>
