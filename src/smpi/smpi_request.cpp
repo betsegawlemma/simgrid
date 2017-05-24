@@ -3,11 +3,16 @@
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "private.h"
 #include "mc/mc.h"
 #include "src/mc/mc_replay.h"
 #include "src/smpi/SmpiHost.hpp"
 #include "src/kernel/activity/SynchroComm.hpp"
+#include "src/smpi/private.h"
+#include "src/smpi/smpi_comm.hpp"
+#include "src/smpi/smpi_datatype.hpp"
+#include "src/smpi/smpi_op.hpp"
+#include "src/smpi/smpi_process.hpp"
+#include "src/smpi/smpi_request.hpp"
 
 #include <algorithm>
 
@@ -368,9 +373,9 @@ void Request::start()
 
     // we make a copy here, as the size is modified by simix, and we may reuse the request in another receive later
     real_size_=size_;
-    action_ = simcall_comm_irecv(process->process(), mailbox, buf_, &real_size_, &match_recv,
-                                         ! process->replaying()? smpi_comm_copy_data_callback
-                                         : &smpi_comm_null_copy_buffer_callback, this, -1.0);
+    action_   = simcall_comm_irecv(
+        process->process(), mailbox, buf_, &real_size_, &match_recv,
+        process->replaying() ? &smpi_comm_null_copy_buffer_callback : smpi_comm_copy_data_callback, this, -1.0);
     XBT_DEBUG("recv simcall posted");
 
     if (async_small_thresh != 0 || (flags_ & RMA) != 0 )
@@ -390,9 +395,9 @@ void Request::start()
       detached_ = 1;
       XBT_DEBUG("Send request %p is detached", this);
       refcount_++;
-      if(!(old_type_->flags() & DT_FLAG_DERIVED)){
+      if (not(old_type_->flags() & DT_FLAG_DERIVED)) {
         oldbuf = buf_;
-        if (!process->replaying() && oldbuf != nullptr && size_!=0){
+        if (not process->replaying() && oldbuf != nullptr && size_ != 0) {
           if((smpi_privatize_global_variables != 0)
             && (static_cast<char*>(buf_) >= smpi_start_data_exe)
             && (static_cast<char*>(buf_) < smpi_start_data_exe + smpi_size_data_exe )){
@@ -427,7 +432,7 @@ void Request::start()
     if (async_small_thresh != 0 || (flags_ & RMA) != 0)
       xbt_mutex_acquire(mut);
 
-    if (!(async_small_thresh != 0 || (flags_ & RMA) !=0)) {
+    if (not(async_small_thresh != 0 || (flags_ & RMA) != 0)) {
       mailbox = process->mailbox();
     } else if (((flags_ & RMA) != 0) || static_cast<int>(size_) < async_small_thresh) { // eager mode
       mailbox = process->mailbox();
@@ -457,13 +462,12 @@ void Request::start()
 
     // we make a copy here, as the size is modified by simix, and we may reuse the request in another receive later
     real_size_=size_;
-    action_ = simcall_comm_isend(SIMIX_process_from_PID(src_+1), mailbox, size_, -1.0,
-                                         buf, real_size_, &match_send,
-                         &xbt_free_f, // how to free the userdata if a detached send fails
-                         !process->replaying() ? smpi_comm_copy_data_callback
-                         : &smpi_comm_null_copy_buffer_callback, this,
-                         // detach if msg size < eager/rdv switch limit
-                         detached_);
+    action_   = simcall_comm_isend(
+        SIMIX_process_from_PID(src_ + 1), mailbox, size_, -1.0, buf, real_size_, &match_send,
+        &xbt_free_f, // how to free the userdata if a detached send fails
+        not process->replaying() ? smpi_comm_copy_data_callback : &smpi_comm_null_copy_buffer_callback, this,
+        // detach if msg size < eager/rdv switch limit
+        detached_);
     XBT_DEBUG("send simcall posted");
 
     /* FIXME: detached sends are not traceable (action_ == nullptr) */
@@ -549,12 +553,12 @@ int Request::testany(int count, MPI_Request requests[], int *index, MPI_Status *
 
   std::vector<int> map; /** Maps all matching comms back to their location in requests **/
   for(i = 0; i < count; i++) {
-    if ((requests[i] != MPI_REQUEST_NULL) && requests[i]->action_ && !(requests[i]->flags_ & PREPARED)) {
-       comms.push_back(requests[i]->action_);
-       map.push_back(i);
+    if ((requests[i] != MPI_REQUEST_NULL) && requests[i]->action_ && not(requests[i]->flags_ & PREPARED)) {
+      comms.push_back(requests[i]->action_);
+      map.push_back(i);
     }
   }
-  if(!map.empty()) {
+  if (not map.empty()) {
     //multiplier to the sleeptime, to increase speed of execution, each failed testany will increase it
     static int nsleeps = 1;
     if(smpi_test_sleep > 0) 
@@ -587,7 +591,7 @@ int Request::testall(int count, MPI_Request requests[], MPI_Status status[])
   MPI_Status *pstat = status == MPI_STATUSES_IGNORE ? MPI_STATUS_IGNORE : &stat;
   int flag=1;
   for(int i=0; i<count; i++){
-    if (requests[i] != MPI_REQUEST_NULL && !(requests[i]->flags_ & PREPARED)) {
+    if (requests[i] != MPI_REQUEST_NULL && not(requests[i]->flags_ & PREPARED)) {
       if (test(&requests[i], pstat)!=1){
         flag=0;
       }else{
@@ -671,7 +675,7 @@ void Request::finish_wait(MPI_Request* request, MPI_Status * status)
   MPI_Request req = *request;
   Status::empty(status);
 
-  if(!((req->detached_ != 0) && ((req->flags_ & SEND) != 0)) && ((req->flags_ & PREPARED) == 0)){
+  if (not((req->detached_ != 0) && ((req->flags_ & SEND) != 0)) && ((req->flags_ & PREPARED) == 0)) {
     if(status != MPI_STATUS_IGNORE) {
       int src = req->src_ == MPI_ANY_SOURCE ? req->real_src_ : req->src_;
       status->MPI_SOURCE = req->comm_->group()->rank(src);
@@ -686,9 +690,9 @@ void Request::finish_wait(MPI_Request* request, MPI_Status * status)
 
 // FIXME Handle the case of a partial shared malloc.
     if (((req->flags_ & ACCUMULATE) != 0) ||
-        (datatype->flags() & DT_FLAG_DERIVED)) { // && (!smpi_is_shared(req->old_buf_))){
+        (datatype->flags() & DT_FLAG_DERIVED)) { // && (not smpi_is_shared(req->old_buf_))){
 
-      if (!smpi_process()->replaying()){
+      if (not smpi_process()->replaying()) {
         if( smpi_privatize_global_variables != 0 && (static_cast<char*>(req->old_buf_) >= smpi_start_data_exe)
             && ((char*)req->old_buf_ < smpi_start_data_exe + smpi_size_data_exe )){
             XBT_VERB("Privatization : We are unserializing to a zone in global memory  Switch data segment ");
@@ -762,7 +766,8 @@ int Request::waitany(int count, MPI_Request requests[], MPI_Status * status)
     map = xbt_new(int, count);
     XBT_DEBUG("Wait for one of %d", count);
     for(i = 0; i < count; i++) {
-      if (requests[i] != MPI_REQUEST_NULL && !(requests[i]->flags_ & PREPARED) && !(requests[i]->flags_ & FINISHED)) {
+      if (requests[i] != MPI_REQUEST_NULL && not(requests[i]->flags_ & PREPARED) &&
+          not(requests[i]->flags_ & FINISHED)) {
         if (requests[i]->action_ != nullptr) {
           XBT_DEBUG("Waiting any %p ", requests[i]);
           xbt_dynar_push(&comms, &requests[i]->action_);
@@ -786,8 +791,8 @@ int Request::waitany(int count, MPI_Request requests[], MPI_Status * status)
       if (i != -1) {
         index = map[i];
         //in case of an accumulate, we have to wait the end of all requests to apply the operation, ordered correctly.
-        if ((requests[index] == MPI_REQUEST_NULL)
-             ||  (!((requests[index]->flags_ & ACCUMULATE) && (requests[index]->flags_ & RECV)))){
+        if ((requests[index] == MPI_REQUEST_NULL) ||
+            (not((requests[index]->flags_ & ACCUMULATE) && (requests[index]->flags_ & RECV)))) {
           finish_wait(&requests[index],status);
           if (requests[i] != MPI_REQUEST_NULL && (requests[i]->flags_ & NON_PERSISTENT))
             requests[index] = MPI_REQUEST_NULL;
@@ -851,7 +856,7 @@ int Request::waitall(int count, MPI_Request requests[], MPI_Status status[])
     }
   }
 
-  if (!accumulates.empty()) {
+  if (not accumulates.empty()) {
     std::sort(accumulates.begin(), accumulates.end(), sort_accumulates);
     for (auto req : accumulates) {
       finish_wait(&req, status);

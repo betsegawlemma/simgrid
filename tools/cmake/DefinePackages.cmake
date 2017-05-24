@@ -53,6 +53,7 @@ set(EXTRA_DIST
   src/surf/network_ib.hpp
   src/surf/ns3/ns3_interface.h
   src/surf/ns3/ns3_simulator.h
+  src/surf/trace_mgr_test.cpp
   src/surf/xml/simgrid.dtd
   src/surf/xml/simgrid_dtd.h
   src/surf/xml/simgrid_dtd.c
@@ -281,13 +282,11 @@ set(XBT_SRC
   src/xbt/xbt_log_layout_format.c
   src/xbt/xbt_log_layout_simple.c
   src/xbt/xbt_main.cpp
-  src/xbt/xbt_matrix.c
   src/xbt/xbt_os_file.c
   src/xbt/xbt_os_synchro.c
   src/xbt/xbt_os_time.c
   src/xbt/xbt_replay.cpp
   src/xbt/xbt_str.cpp
-  src/xbt/xbt_strbuff.c
   src/xbt/xbt_virtu.c
   src/xbt_modinter.h
   )
@@ -534,7 +533,6 @@ set(LUA_SRC
   )
 
 set(TRACING_SRC
-  src/instr/instr_TI_trace.cpp
   src/instr/instr_config.cpp
   src/instr/instr_interface.cpp
   src/instr/instr_paje_containers.cpp
@@ -545,7 +543,6 @@ set(TRACING_SRC
   src/instr/instr_private.h
   src/instr/instr_smpi.h
   src/instr/instr_resource_utilization.cpp
-  src/instr/instr_trace.cpp
   )
 
 set(JEDULE_SRC
@@ -587,7 +584,6 @@ set(MC_SRC
   src/mc/remote/mc_protocol.cpp
   
   src/mc/AddressSpace.hpp
-  src/mc/AddressSpace.cpp
   src/mc/Frame.hpp
   src/mc/Frame.cpp
   src/mc/ModelChecker.hpp
@@ -601,7 +597,6 @@ set(MC_SRC
   src/mc/RegionSnapshot.cpp
   src/mc/RegionSnapshot.hpp
   src/mc/Type.hpp
-  src/mc/Variable.cpp
   src/mc/Variable.hpp
   src/mc/mc_forward.hpp
   src/mc/Process.hpp
@@ -726,8 +721,6 @@ set(headers_to_install
   include/xbt/log.h
   include/xbt/log.hpp
   include/xbt/mallocator.h
-  include/xbt/matrix.h
-  include/xbt/memory.hpp
   include/xbt/misc.h
   include/xbt/mmalloc.h
   include/xbt/module.h
@@ -735,7 +728,6 @@ set(headers_to_install
   include/xbt/range.hpp
   include/xbt/replay.hpp
   include/xbt/str.h
-  include/xbt/strbuff.h
   include/xbt/swag.h
   include/xbt/synchro.h
   include/xbt/sysdep.h
@@ -787,7 +779,7 @@ set(simgrid_sources
   ${XBT_SRC}
   )
 
-if(${HAVE_JEDULE})  
+if(${SIMGRID_HAVE_JEDULE})  
   set(simgrid_sources  ${simgrid_sources}  ${JEDULE_SRC})
 else()
   set(EXTRA_DIST       ${EXTRA_DIST}       ${JEDULE_SRC})
@@ -797,11 +789,11 @@ if(enable_smpi)
   set(simgrid_sources  ${simgrid_sources}  ${SMPI_SRC})
 endif()
 
-if(HAVE_MC)
+if(SIMGRID_HAVE_MC)
   set(simgrid_sources  ${simgrid_sources}  ${MC_SRC})
 endif()
 
-if(HAVE_NS3)
+if(SIMGRID_HAVE_NS3)
   set(simgrid_sources  ${simgrid_sources}  ${NS3_SRC})
 endif()
 
@@ -815,7 +807,7 @@ if(WIN32)
     )
 endif()
 
-if(HAVE_LUA)
+if(SIMGRID_HAVE_LUA)
   set(simgrid_sources  ${simgrid_sources}  ${LUA_SRC})
 else()
   set(EXTRA_DIST       ${EXTRA_DIST}       ${LUA_SRC})
@@ -952,7 +944,7 @@ set(txt_files
   ${txt_files}
   AUTHORS
   COPYING
-  README
+  README.md
   ChangeLog
   INSTALL
   LICENSE-LGPL-2.1

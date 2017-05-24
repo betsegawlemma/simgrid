@@ -28,7 +28,7 @@ under the terms of the license (GNU LGPL) which comes with this package.
 # print "WARNING: Output were only sorted using the $sort_prefix first chars.\n"
 #    if ( $sort_prefix > 0 );
 # print "WARNING: Use <! output sort 19> to sort by simulated date and process ID only.\n";
-#    
+#
 # print "----8<---------------  Begin of unprocessed observed output (as it should appear in file):\n";
 # map {print "> $_\n"} @{$cmd{'unsorted got'}};
 # print "--------------->8----  End of the unprocessed observed output.\n";
@@ -292,7 +292,7 @@ class Cmd(object):
             self.timeout *= 20
             self.args = TeshState().wrapper + self.args
         elif re.match(".*smpirun.*", self.args) is not None:
-            self.args = "sh " + self.args 
+            self.args = "sh " + self.args
         if TeshState().jenkins and self.timeout != None:
             self.timeout *= 10
 
@@ -418,7 +418,7 @@ if __name__ == '__main__':
     group1.add_argument('--setenv', metavar='var=value', action='append', help='set a specific environment variable')
     group1.add_argument('--cfg', metavar='arg', help='add parameter --cfg=arg to each command line')
     group1.add_argument('--log', metavar='arg', help='add parameter --log=arg to each command line')
-    group1.add_argument('--ignore-jenkins', action='store_true', help='ignore all cruft generated on SimGrid continous integration servers')
+    group1.add_argument('--ignore-jenkins', action='store_true', help='ignore all cruft generated on SimGrid continous integration servers')
     group1.add_argument('--wrapper', metavar='arg', help='Run each command in the provided wrapper (eg valgrind)')
     group1.add_argument('--keep', action='store_true', help='Keep the obtained output when it does not match the expected one')
 
@@ -442,6 +442,8 @@ if __name__ == '__main__':
            re.compile("==WARNING: ASan is ignoring requested __asan_handle_no_return: stack top:"),
            re.compile("False positive error reports may follow"),
            re.compile("For details see http://code.google.com/p/address-sanitizer/issues/detail?id=189"),
+           
+           re.compile("Python runtime initialized with LC_CTYPE=C .*"),
            ]
         TeshState().jenkins = True # This is a Jenkins build
     

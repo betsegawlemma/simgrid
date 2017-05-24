@@ -63,8 +63,7 @@ public:
   StorageModel();
   ~StorageModel();
 
-  virtual Storage* createStorage(const char* id, const char* type_id, const char* content_name,
-                                 const char* content_type, const char* attach) = 0;
+  virtual Storage* createStorage(const char* id, const char* type_id, const char* content_name, const char* attach) = 0;
 
   std::vector<Storage*> p_storageList;
 };
@@ -81,21 +80,20 @@ class Storage : public simgrid::surf::Resource,
 public:
 
   /** @brief Storage constructor */
-  Storage(Model* model, const char* name, lmm_system_t maxminSystem, double bread, double bwrite, double bconnection,
-          const char* type_id, const char* content_name, const char* content_type, sg_size_t size, const char* attach);
+  Storage(Model* model, const char* name, lmm_system_t maxminSystem, double bread, double bwrite, const char* type_id,
+      const char* content_name, sg_size_t size, const char* attach);
 
   ~Storage();
 
   /** @brief Check if the Storage is used (if an action currently uses its resources) */
   bool isUsed() override;
 
-  void apply_event(tmgr_trace_iterator_t event, double value) override;
+  void apply_event(tmgr_trace_event_t event, double value) override;
 
   void turnOn() override;
   void turnOff() override;
 
   std::map<std::string, sg_size_t*>* content_;
-  char* contentType_;
   sg_size_t size_;
   sg_size_t usedSize_;
   char * typeId_;
@@ -225,19 +223,12 @@ public:
 typedef struct s_storage_type {
   char *model;
   char *content;
-  char *content_type;
   char *type_id;
   xbt_dict_t properties;
   std::map<std::string, std::string>* model_properties;
   sg_size_t size;
 } s_storage_type_t;
 typedef s_storage_type_t* storage_type_t;
-
-typedef struct s_mount {
-  void *storage;
-  char *name;
-} s_mount_t;
-typedef s_mount_t* mount_t;
 
 typedef struct surf_file {
   char *name;

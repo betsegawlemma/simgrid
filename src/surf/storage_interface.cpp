@@ -6,7 +6,6 @@
 
 #include "storage_interface.hpp"
 #include "surf_private.h"
-#include "xbt/file.h" /* xbt_getline */
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -15,9 +14,7 @@
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_storage, surf, "Logging specific to the SURF storage module");
 
 xbt_lib_t storage_lib;
-int SIMIX_STORAGE_LEVEL        = -1; // Simix storage level
 int MSG_STORAGE_LEVEL          = -1; // Msg storage level
-int ROUTING_STORAGE_LEVEL      = -1; // Routing for storage level
 int SURF_STORAGE_LEVEL = -1;
 simgrid::surf::StorageModel *surf_storage_model = nullptr;
 
@@ -52,10 +49,8 @@ StorageModel::~StorageModel(){
  ************/
 
 Storage::Storage(Model* model, const char* name, lmm_system_t maxminSystem, double bread, double bwrite,
-                 double bconnection, const char* type_id, const char* content_name, const char* content_type,
-                 sg_size_t size, const char* attach)
-    : Resource(model, name, lmm_constraint_new(maxminSystem, this, bconnection))
-    , contentType_(xbt_strdup(content_type))
+                 const char* type_id, const char* content_name, sg_size_t size, const char* attach)
+    : Resource(model, name, lmm_constraint_new(maxminSystem, this, MAX(bread, bwrite)))
     , size_(size)
     , usedSize_(0)
     , typeId_(xbt_strdup(type_id))
@@ -64,7 +59,7 @@ Storage::Storage(Model* model, const char* name, lmm_system_t maxminSystem, doub
   content_ = parseContent(content_name);
   attach_  = xbt_strdup(attach);
   turnOn();
-  XBT_DEBUG("Create resource with Bconnection '%f' Bread '%f' Bwrite '%f' and Size '%llu'", bconnection, bread, bwrite, size);
+  XBT_DEBUG("Create resource with Bread '%f' Bwrite '%f' and Size '%llu'", bread, bwrite, size);
   constraintRead_  = lmm_constraint_new(maxminSystem, this, bread);
   constraintWrite_ = lmm_constraint_new(maxminSystem, this, bwrite);
 }
@@ -77,14 +72,13 @@ Storage::~Storage(){
     delete content_;
   }
   free(typeId_);
-  free(contentType_);
   free(attach_);
 }
 
 std::map<std::string, sg_size_t*>* Storage::parseContent(const char* filename)
 {
   usedSize_ = 0;
-  if ((!filename) || (strcmp(filename, "") == 0))
+  if ((not filename) || (strcmp(filename, "") == 0))
     return nullptr;
 
   std::map<std::string, sg_size_t*>* parse_content = new std::map<std::string, sg_size_t*>();
@@ -106,7 +100,7 @@ std::map<std::string, sg_size_t*>* Storage::parseContent(const char* filename)
       *psize = size;
       parse_content->insert({tokens.front(), psize});
     }
-  } while (!fs->eof());
+  } while (not fs->eof());
   delete fs;
   return parse_content;
 }
@@ -117,7 +111,7 @@ bool Storage::isUsed()
   return false;
 }
 
-void Storage::apply_event(tmgr_trace_iterator_t /*event*/, double /*value*/)
+void Storage::apply_event(tmgr_trace_event_t /*event*/, double /*value*/)
 {
   THROW_UNIMPLEMENTED;
 }

@@ -164,7 +164,7 @@ bool Mutex::try_lock(smx_actor_t issuer)
 void Mutex::unlock(smx_actor_t issuer)
 {
   XBT_IN("(%p, %p)", this, issuer);
-  if(!this->locked)
+  if (not this->locked)
     THROWF(mismatch_error, 0, "Cannot release that mutex: it was not locked.");
 
   /* If the mutex is not owned by the issuer, that's not good */
@@ -375,7 +375,6 @@ void intrusive_ptr_add_ref(s_smx_cond_t *cond)
 {
   auto previous = (cond->refcount_)++;
   xbt_assert(previous != 0);
-  (void) previous;
 }
 
 void intrusive_ptr_release(s_smx_cond_t *cond)
