@@ -9,6 +9,7 @@
 #include <simgrid/s4u.hpp>
 #include <string>
 #include "simgrid/plugins/energy.h"
+#include "simgrid/msg.h"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_energyconsumption,
 		"Messages specific for this s4u example");
@@ -49,6 +50,7 @@ public:
 			XBT_INFO("Traffic %f", comm_size);
 
 			simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
+
 		}
 		XBT_INFO("Sender done");
 
@@ -81,7 +83,9 @@ public:
 
 		XBT_INFO("Receiving ...");
 		double total_energy = 0.0;
+
 		while (1) {
+
 			mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 
 			char* res = static_cast<char*>(simgrid::s4u::this_actor::recv(mailbox));
@@ -114,6 +118,22 @@ public:
 	}
 };
 
+class Terminator {
+
+public:
+	explicit Terminator(std::vector<std::string> args) {
+
+		XBT_INFO("Terminator ...");
+	}
+
+	void operator()() {
+
+		MSG_process_sleep(1);
+		sg_on_simulation_end();
+
+	}
+};
+
 int main(int argc, char* argv[]) {
 
 	sg_link_energy_plugin_init();
@@ -126,6 +146,8 @@ int main(int argc, char* argv[]) {
 	e->loadPlatform(argv[1]); /** - Load the platform description */
 	e->registerFunction<Sender>("sender");
 	e->registerFunction<Receiver>("receiver"); /** - Register the function to be executed by the processes */
+	e->registerFunction<Terminator>("terminator");
+
 	e->loadDeployment(argv[2]); /** - Deploy the application */
 	e->run(); /** - Run the simulation */
 

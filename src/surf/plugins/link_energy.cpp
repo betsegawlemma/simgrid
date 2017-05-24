@@ -222,7 +222,7 @@ double LinkEnergy::computeALinkDynamicPower() {
 
 	double dynamic_power = 0.0;
 
-	if(power_range_watts_list.empty()){
+	if (power_range_watts_list.empty()) {
 		return 0.0;
 	}
 
@@ -453,4 +453,7 @@ double sg_link_get_usage(sg_link_t link) {
 	return link_energy->getLinkUsage();
 }
 
+void sg_on_simulation_end() {
+	onSimulationEnd();
+}
 SG_END_DECL()
