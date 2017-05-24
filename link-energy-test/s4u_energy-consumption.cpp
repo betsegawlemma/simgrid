@@ -46,11 +46,11 @@ public:
 			/* - Send the task to the @ref worker */
 			char* payload = bprintf("%f", comm_size);
 
-			XBT_INFO("Traffic\t%f",comm_size);
+			XBT_INFO("Traffic %f",comm_size);
 
 			simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
 		}
-		XBT_DEBUG("Sender done");
+		XBT_INFO("Sender done");
 
 		mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 		simgrid::s4u::this_actor::send(mailbox, xbt_strdup("finalize"), 0);
@@ -79,7 +79,7 @@ public:
 
 	void operator()() {
 
-		XBT_DEBUG("Receiving ...");
+		XBT_INFO("Receiving ...");
 		double total_energy = 0.0;
 		while (1) {
 			mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
@@ -93,7 +93,7 @@ public:
 			}
 			xbt_free(res);
 		}
-		XBT_DEBUG("Receiver done");
+		XBT_INFO("Receiver done");
 
 		src_host->routeTo(dst_host, links, nullptr);
 

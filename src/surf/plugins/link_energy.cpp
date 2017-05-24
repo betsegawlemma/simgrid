@@ -222,6 +222,10 @@ double LinkEnergy::computeALinkDynamicPower() {
 
 	double dynamic_power = 0.0;
 
+	if(power_range_watts_list.empty()){
+		return 0.0;
+	}
+
 	xbt_assert(!power_range_watts_list.empty(),
 			"No power range properties specified for link %s",
 			this->up_link->name());
@@ -231,7 +235,7 @@ double LinkEnergy::computeALinkDynamicPower() {
 	double idle = range.idle;
 	double power_slope = busy - idle;
 
-	if (this->link_usage > 0) { /* Something is going on, the link is not idle */
+	if (this->link_usage > 1) { /* Something is going on, the link is not idle */
 
 		dynamic_power = (this->link_usage / this->up_link->bandwidth())
 				* power_slope;
@@ -389,13 +393,15 @@ static void onSimulationEnd() {
 
 			if (strcmp(name, "__loopback__")) {
 
-				XBT_INFO("%s\tUsage\t%f\tBandwidth\t%f", name,
-						link_list[i]->extension<LinkEnergy>()->getLinkUsage(),link_list[i]->bandwidth());
+				XBT_INFO("%s Usage %f Bandwidth %f Power %f Energy %f", name,
+						link_list[i]->extension<LinkEnergy>()->getLinkUsage(),
+						link_list[i]->bandwidth(), a_link_total_power,
+						a_link_total_energy);
 			}
 
 		}
 	}
-	XBT_INFO("Power\t%f\tEnergy\t%f", total_power, total_energy);
+	XBT_INFO("TotalPower %f TotalEnergy %f", total_power, total_energy);
 	xbt_free(link_list);
 
 }
