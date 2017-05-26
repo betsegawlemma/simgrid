@@ -2,14 +2,11 @@
 <!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
 <platform version="4.1">
 
-  <!-- The master process (with some arguments) -->
-  <process host="Host0" function="sender">
-     <argument value="68E6"/>   <!-- Comm size of tasks -->
-  </process>
-  <!-- The worker process (with no argument) -->
-  <process host="Host2" function="receiver" on_failure="RESTART">
-  </process>
-  <process host="Host2" function="terminator" on_failure="RESTART">
-  </process>
-  
+	<!-- The master process (with some arguments) -->
+	<process host="H1" function="sender">
+		<argument value="68E6" />   <!-- Comm size of tasks -->
+	</process>
+	<!-- The worker process (with no argument) -->
+	<process host="H2" function="receiver" on_failure="RESTART">
+	</process>
 </platform>

@@ -8,7 +8,7 @@
 #include "simgrid/s4u/Link.hpp"
 #include <simgrid/s4u.hpp>
 #include <string>
-#include "simgrid/plugins/energy.h"
+#include "simgrid/plugins/link_energy.h"
 #include "simgrid/msg.h"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(s4u_app_energyconsumption,
@@ -19,9 +19,6 @@ class Sender {
 	double comm_size;
 
 	simgrid::s4u::MailboxPtr mailbox { };
-	simgrid::s4u::Host* src_host { };
-	simgrid::s4u::Host* dst_host { };
-	std::vector<simgrid::s4u::Link*>* links { };
 
 public:
 	explicit Sender(std::vector<std::string> args) {
@@ -30,31 +27,23 @@ public:
 
 		comm_size = std::stod(args[1]);
 
-		links = new std::vector<simgrid::s4u::Link*>();
-		src_host = simgrid::s4u::Host::by_name("Host0");
-		dst_host = simgrid::s4u::Host::by_name("Host2");
-
 	}
 
 	void operator()() {
 
 		double total_energy = 0.0;
 
-		for (int i = 0; i < 1; i++) {
+		mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 
-			mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
+		/* - Send the task to the @ref worker */
+		char* payload = bprintf("%f", comm_size);
 
-			/* - Send the task to the @ref worker */
-			char* payload = bprintf("%f", comm_size);
+		XBT_INFO("Traffic %f", comm_size);
 
-			XBT_INFO("Traffic %f", comm_size);
+		simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
 
-			simgrid::s4u::this_actor::send(mailbox, payload, comm_size);
-
-		}
 		XBT_INFO("Sender done");
 
-		mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 		simgrid::s4u::this_actor::send(mailbox, xbt_strdup("finalize"), 0);
 	}
 };
@@ -62,20 +51,9 @@ public:
 class Receiver {
 
 	simgrid::s4u::MailboxPtr mailbox { };
-	std::vector<simgrid::s4u::Link*>* links { };
-	simgrid::s4u::Host* src_host { };
-	simgrid::s4u::Host* dst_host { };
 
 public:
 	explicit Receiver(std::vector<std::string> args) {
-
-		xbt_assert(args.size() == 1,
-				"The worker expects a single argument from the XML deployment file: "
-						"its worker ID (its numerical rank)");
-		links = new std::vector<simgrid::s4u::Link*>();
-		src_host = simgrid::s4u::Host::by_name("Host0");
-		dst_host = simgrid::s4u::Host::by_name("Host2");
-		mailbox = {};
 
 	}
 
@@ -88,7 +66,8 @@ public:
 
 			mailbox = simgrid::s4u::Mailbox::byName(std::string("message"));
 
-			char* res = static_cast<char*>(simgrid::s4u::this_actor::recv(mailbox));
+			char* res = static_cast<char*>(simgrid::s4u::this_actor::recv(
+					mailbox));
 			xbt_assert(res != nullptr, "Some problem");
 
 			if (strcmp(res, "finalize") == 0) { /* - Exit if 'finalize' is received */
@@ -98,22 +77,6 @@ public:
 			xbt_free(res);
 		}
 		XBT_INFO("Receiver done");
-
-		src_host->routeTo(dst_host, links, nullptr);
-
-		xbt_assert(!links->empty(),
-				"You're trying to send data from %s to %s but there is no connecting path between these two hosts.",
-				src_host->cname(), dst_host->cname());
-
-		for (auto link : *links) {
-
-			XBT_INFO("From \"%s\" to \"%s\" link \"%s\" bandwidth %f energy %f link usage %f",
-					src_host->cname(), dst_host->cname(), link->name(),
-					link->bandwidth(), sg_link_get_consumed_energy(link), sg_link_get_usage(link));
-			total_energy += sg_link_get_consumed_energy(link);
-
-		}
-		XBT_INFO("Total energy from the receiver: %f", total_energy);
 
 	}
 };
