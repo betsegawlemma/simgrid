@@ -129,7 +129,7 @@ class FileReader(Singleton):
             self.filename = os.path.basename(filename)
             self.abspath = os.path.abspath(filename)
             self.f = open(self.filename_raw)
-        
+
         self.linenumber = 0
 
     def linenumber(self):
@@ -305,13 +305,13 @@ class Cmd(object):
 
         try:
             proc = subprocess.Popen(args, bufsize=1, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-        except OSError as e:
-            if e.errno == 8:
-                e.strerror += "\nOSError: [Errno 8] Executed scripts should start with shebang line (like #!/bin/sh)"
-            raise e
         except FileNotFoundError:
             print("["+FileReader().filename+":"+str(self.linenumber)+"] Cannot start '"+args[0]+"': File not found")
             exit(3)
+        except OSError as osE:
+            if osE.errno == 8:
+                osE.strerror += "\nOSError: [Errno 8] Executed scripts should start with shebang line (like #!/bin/sh)"
+            raise osE
 
         cmdName = FileReader().filename+":"+str(self.linenumber)
         try:
@@ -348,7 +348,7 @@ class Cmd(object):
                 self.output_pipe_stdout.sort(key=lambda x: x[:self.sort].lower())
             
             diff = list(difflib.unified_diff(self.output_pipe_stdout, stdouta,lineterm="",fromfile='expected', tofile='obtained'))
-            if len(diff) > 0: 
+            if len(diff) > 0:
                 print("Output of <"+cmdName+"> mismatch:")
                 if self.sort >= 0: # If sorted, truncate the diff output and show the unsorted version
                     difflen = 0;

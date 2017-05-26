@@ -38,7 +38,6 @@
 
 #include "private.h"
 #include "private.hpp"
-#include "smpi/smpi_shared_malloc.hpp"
 #include "xbt/dict.h"
 #include "xbt/ex.hpp"
 #include <errno.h>
@@ -87,7 +86,7 @@ public:
     return filename_length == that.filename_length && line == that.line &&
            std::memcmp(filename, that.filename, filename_length) == 0;
   }
-  bool operator!=(smpi_source_location const& that) const { return !(*this == that); }
+  bool operator!=(smpi_source_location const& that) const { return not(*this == that); }
 };
 }
 

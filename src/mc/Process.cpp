@@ -1,10 +1,9 @@
-/* Copyright (c) 2014-2015. The SimGrid Team.
- * All rights reserved.                                                     */
+/* Copyright (c) 2014-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#define _FILE_OFFSET_BITS 64
+#define _FILE_OFFSET_BITS 64 /* needed for pread_whole to work as expected on 32bits */
 
 #include <assert.h>
 #include <stddef.h>
@@ -28,8 +27,8 @@
 #include <libunwind.h>
 #include <libunwind-ptrace.h>
 
-#include <xbt/log.h>
-#include <xbt/base.h>
+#include "xbt/base.h"
+#include "xbt/log.h"
 #include <xbt/mmalloc.h>
 
 #include "src/mc/mc_unw.h"
