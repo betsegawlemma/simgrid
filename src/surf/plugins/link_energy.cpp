@@ -3,11 +3,10 @@
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "simgrid/plugins/energy.h"
+#include "simgrid/plugins/link_energy.h"
 #include "simgrid/simix.hpp"
 #include "src/surf/network_interface.hpp"
 #include "simgrid/s4u/Engine.hpp"
-
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <string>
@@ -42,14 +41,14 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_link_energy, surf,
 		"Logging specific to the SURF LinkEnergy plugin");
 
 namespace simgrid {
-namespace energy {
+namespace plugin {
 
-class PowerRange {
+class LinkPowerRange {
 public:
 	double idle;
 	double busy;
 
-	PowerRange(double idle, double busy) :
+	LinkPowerRange(double idle, double busy) :
 			idle(idle), busy(busy) {
 	}
 };
@@ -82,7 +81,7 @@ private:
 	simgrid::s4u::Link *up_link { };
 	simgrid::s4u::Link *down_link { };
 
-	std::vector<PowerRange> power_range_watts_list { };
+	std::vector<LinkPowerRange> power_range_watts_list { };
 
 	std::map<const char*, double> a_link_total_power { };
 	std::map<const char*, double> a_link_total_energy { };
@@ -209,7 +208,7 @@ void LinkEnergy::initWattsRangeList() {
 		xbt_free(idle);
 		xbt_free(busy);
 
-		this->power_range_watts_list.push_back(PowerRange(idleVal, busyVal));
+		this->power_range_watts_list.push_back(LinkPowerRange(idleVal, busyVal));
 		// set the idle value for each link
 		this->a_link_total_power[this->up_link->name()] = idleVal;
 		initALinkTotalEnergy();
@@ -317,11 +316,11 @@ double LinkEnergy::getLinkUsage() {
 }
 }
 
-using simgrid::energy::LinkEnergy;
+using simgrid::plugin::LinkEnergy;
 
 /* **************************** events  callback *************************** */
 static void onCreation(simgrid::s4u::Link& link) {
-	XBT_DEBUG("onCreation is called");
+	XBT_DEBUG("onCreation is called for link: %s", link.name());
 	link.extension_set(new LinkEnergy(&link));
 }
 
@@ -354,7 +353,7 @@ static void onActionStateChange(simgrid::surf::NetworkAction* action) {
 }
 
 static void onLinkStateChange(simgrid::s4u::Link &link) {
-	XBT_DEBUG("onLinkStateChange is called");
+	XBT_DEBUG("onLinkStateChange is called for link: %s", link.name());
 
 	LinkEnergy *link_energy = link.extension<LinkEnergy>();
 	link_energy->update();
@@ -370,7 +369,7 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
 			link.name(), link_energy->getALinkTotalPower(&link));
 }
 
-static void onSimulationEnd() {
+void computAndDisplayTotalEnergy() {
 	simgrid::s4u::Link* link = nullptr;
 	sg_link_t* link_list = link->listLink();
 	int link_count = link->linkCount();
@@ -379,7 +378,6 @@ static void onSimulationEnd() {
 	double used_links_power = 0.0; // Power consumed by links who participated in communication task
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
-
 			double a_link_total_power =
 					link_list[i]->extension<LinkEnergy>()->getALinkTotalPower(
 							link_list[i]);
@@ -388,22 +386,22 @@ static void onSimulationEnd() {
 							link_list[i]);
 			total_power += a_link_total_power;
 			total_energy += a_link_total_energy;
-
 			const char* name = link_list[i]->name();
-
 			if (strcmp(name, "__loopback__")) {
-
 				XBT_INFO("%s Usage %f Bandwidth %f Power %f Energy %f", name,
 						link_list[i]->extension<LinkEnergy>()->getLinkUsage(),
 						link_list[i]->bandwidth(), a_link_total_power,
 						a_link_total_energy);
 			}
-
 		}
 	}
 	XBT_INFO("TotalPower %f TotalEnergy %f", total_power, total_energy);
 	xbt_free(link_list);
+}
 
+static void onSimulationEnd() {
+	XBT_DEBUG("onSimulationEnd is called ...");
+	computAndDisplayTotalEnergy();
 }
 /* **************************** Public interface *************************** */
 SG_BEGIN_DECL()

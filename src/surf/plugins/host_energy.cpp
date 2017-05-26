@@ -62,7 +62,7 @@ and then use the following function to retrieve the consumption of a given host:
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_energy, surf, "Logging specific to the SURF energy plugin");
 
 namespace simgrid {
-namespace energy {
+namespace plugin {
 
 class PowerRange {
 public:
@@ -271,7 +271,7 @@ void HostEnergy::initWattsRangeList()
 }
 }
 
-using simgrid::energy::HostEnergy;
+using simgrid::plugin::HostEnergy;
 
 /* **************************** events  callback *************************** */
 static void onCreation(simgrid::s4u::Host& host)
