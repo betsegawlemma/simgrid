@@ -81,25 +81,9 @@ public:
 	}
 };
 
-class Terminator {
-
-public:
-	explicit Terminator(std::vector<std::string> args) {
-
-		XBT_INFO("Terminator ...");
-	}
-
-	void operator()() {
-
-		MSG_process_sleep(1);
-		sg_on_simulation_end();
-
-	}
-};
-
 int main(int argc, char* argv[]) {
 
-	sg_link_energy_plugin_init();
+        ns3_link_energy_plugin_init();
 
 	simgrid::s4u::Engine* e = new simgrid::s4u::Engine(&argc, argv);
 	xbt_assert(argc > 2, "Usage: %s platform_file deployment_file\n"
@@ -109,7 +93,6 @@ int main(int argc, char* argv[]) {
 	e->loadPlatform(argv[1]); /** - Load the platform description */
 	e->registerFunction<Sender>("sender");
 	e->registerFunction<Receiver>("receiver"); /** - Register the function to be executed by the processes */
-	e->registerFunction<Terminator>("terminator");
 
 	e->loadDeployment(argv[2]); /** - Deploy the application */
 	e->run(); /** - Run the simulation */
