@@ -21,8 +21,8 @@
 #include <utility>
 #include <vector>
 
-#include <xbt/sysdep.h>
-#include <xbt/utility.hpp>
+#include "xbt/sysdep.h"
+#include "xbt/utility.hpp"
 
 namespace simgrid {
 namespace xbt {
