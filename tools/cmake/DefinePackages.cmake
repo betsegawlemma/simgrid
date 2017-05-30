@@ -50,10 +50,13 @@ set(EXTRA_DIST
   src/surf/network_constant.hpp
   src/surf/network_interface.hpp
   src/surf/network_ns3.hpp
+  src/surf/network_ecofen.hpp
   src/surf/network_smpi.hpp
   src/surf/network_ib.hpp
   src/surf/ns3/ns3_interface.h
   src/surf/ns3/ns3_simulator.h
+  src/surf/ecofen/ecofen_interface.h
+  src/surf/ecofen/ecofen_simulator.h
   src/surf/trace_mgr_test.cpp
   src/surf/xml/simgrid.dtd
   src/surf/xml/simgrid_dtd.h
@@ -297,7 +300,11 @@ if(HAVE_MMALLOC)
 endif()
 
 set(NS3_SRC  src/surf/network_ns3.cpp
-             src/surf/ns3/ns3_simulator.cc )
+             src/surf/ns3/ns3_simulator.cc 
+             src/surf/ecofen/ecofen_simulator.cc
+             src/surf/network_ecofen.cpp
+    )
+
 
 set(SURF_SRC
   src/kernel/routing/ClusterZone.cpp
@@ -341,6 +348,8 @@ set(SURF_SRC
   src/surf/network_interface.cpp
   src/surf/plugins/host_energy.cpp
   src/surf/plugins/link_energy.cpp
+  src/surf/plugins/ecofen.cpp
+  
   src/surf/plugins/host_load.cpp
   src/surf/PropertyHolder.cpp
   src/surf/sg_platf.cpp
