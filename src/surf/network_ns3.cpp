@@ -194,14 +194,16 @@ NetworkNS3Model::NetworkNS3Model() :
 
 	ns3_initialize(ns3_tcp_model.get().c_str());
 
+
 	simgrid::kernel::routing::NetPoint::onCreation.connect(
 			[](simgrid::kernel::routing::NetPoint* pt) {
 				pt->extension_set<NetPointNs3>(new NetPointNs3());
-
+				  XBT_VERB("SimGrid's %s is node %d within NS3", pt->cname(), pt->extension<NetPointNs3>()->node_num);
 			});
 	simgrid::surf::on_cluster.connect(&clusterCreation_cb);
 	simgrid::s4u::onPlatformCreated.connect(&postparse_cb);
 	simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
+
 
 	LogComponentEnable("UdpEchoClientApplication", ns3::LOG_LEVEL_INFO);
 	LogComponentEnable("UdpEchoServerApplication", ns3::LOG_LEVEL_INFO);
@@ -346,6 +348,7 @@ NetworkNS3Action::NetworkNS3Action(Model* model, double size, s4u::Host* src,
 	s4u::Link::onCommunicate(this, src, dst);
 }
 
+<<<<<<< HEAD
  void NetworkNS3Action::suspend() {
  THROW_UNIMPLEMENTED;
  }
@@ -371,6 +374,16 @@ std::list<LinkImpl*> NetworkNS3Action::links() {
 	}
 
 	return retlist;
+=======
+void NetworkNS3Action::resume() {
+  THROW_UNIMPLEMENTED;
+}
+
+std::list<LinkImpl*> NetworkNS3Action::links()
+{
+  THROW_UNIMPLEMENTED;
+  return nullptr;
+>>>>>>> upstream/master
 }
 /*
  std::list<LinkImpl*> NetworkNS3Action::links() {
