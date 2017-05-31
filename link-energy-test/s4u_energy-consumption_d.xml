@@ -4,7 +4,7 @@
 
 	<!-- The master process (with some arguments) -->
 	<process host="H1" function="sender">
-		<argument value="68E6" />   <!-- Comm size of tasks -->
+		<argument value="1E6" />   <!-- Comm size of tasks -->
 	</process>
 	<!-- The worker process (with no argument) -->
 	<process host="H2" function="receiver" on_failure="RESTART">
