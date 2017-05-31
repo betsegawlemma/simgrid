@@ -48,8 +48,6 @@ set(EXTRA_DIST
   src/surf/network_ib.hpp
   src/surf/ns3/ns3_interface.h
   src/surf/ns3/ns3_simulator.h
-  src/surf/ecofen/ecofen_interface.h
-  src/surf/ecofen/ecofen_simulator.h
   src/surf/trace_mgr_test.cpp
   src/surf/xml/simgrid.dtd
   src/surf/xml/simgrid_dtd.h
@@ -294,8 +292,6 @@ endif()
 
 set(NS3_SRC  src/surf/network_ns3.cpp
              src/surf/ns3/ns3_simulator.cc 
-             src/surf/ecofen/ecofen_simulator.cc
-             src/surf/network_ecofen.cpp
     )
 
 
