@@ -63,13 +63,10 @@ public:
 	double getLastUpdated();
 	double getCurrntTime();
 	void initWattsRangeList();
-	double getLinkUsage();
-	double getLinkIdlePower();
-	void update();
+	void init_ecofen(double netDeviceIdleValue);
+	void init_ns3();
 
 private:
-
-	void updateLinkUsage();
 
 	simgrid::s4u::Link *link { };
 	simgrid::s4u::Link *up_link { };
@@ -78,7 +75,6 @@ private:
 	std::vector<LinkPowerRange> power_range_watts_list { };
 
 	double last_updated { 0.0 }; /*< Timestamp of the last energy update event*/
-	double link_usage { 0.0 };
 
 };
 
@@ -86,70 +82,36 @@ simgrid::xbt::Extension<simgrid::s4u::Link, Ecofen> Ecofen::EXTENSION_ID;
 
 Ecofen::Ecofen(simgrid::s4u::Link *ptr) :
 		link(ptr), last_updated(surf_get_clock()) {
+	/*
+	 char *lnk_name = xbt_strdup(this->link->name());
+	 char *lnk_down = strstr(lnk_name, "_DOWN");
+	 char *lnk_up = strstr(lnk_name, "_UP");
 
-	char *lnk_name = xbt_strdup(this->link->name());
-	char *lnk_down = strstr(lnk_name, "_DOWN");
-	char *lnk_up = strstr(lnk_name, "_UP");
+	 if (lnk_down) {
 
-	if (lnk_down) {
+	 this->down_link = this->link->byName(lnk_name);
+	 strncpy(lnk_down, "_UP", 4);
+	 this->up_link = this->link->byName(lnk_name);
 
-		this->down_link = this->link->byName(lnk_name);
-		strncpy(lnk_down, "_UP", 4);
-		this->up_link = this->link->byName(lnk_name);
+	 } else if (lnk_up) {
 
-	} else if (lnk_up) {
+	 this->up_link = this->link->byName(lnk_name);
+	 strncpy(lnk_up, "_DOWN", 6);
+	 this->down_link = this->link->byName(lnk_name);
 
-		this->up_link = this->link->byName(lnk_name);
-		strncpy(lnk_up, "_DOWN", 6);
-		this->down_link = this->link->byName(lnk_name);
-
-	} else {
-		this->up_link = this->link;
-	}
-	xbt_free(lnk_name);
-	xbt_free(lnk_down);
-	xbt_free(lnk_up);
+	 } else {
+	 this->up_link = this->link;
+	 }
+	 initWattsRangeList();
+	 xbt_free(lnk_name);
+	 xbt_free(lnk_down);
+	 xbt_free(lnk_up);
+	 */
 }
 
 Ecofen::~Ecofen() = default;
 
 /* Computes the consumption so far.  Called lazily on need. */
-void Ecofen::update() {
-
-	updateLinkUsage();
-	return;
-
-}
-
-void Ecofen::updateLinkUsage() {
-
-	double uplink_usage;
-	double downlink_usage;
-
-	const char* lnk_down = strstr(link->name(), "_DOWN");
-	const char* lnk_up = strstr(link->name(), "_UP");
-
-	if (lnk_down) {
-
-		this->up_link->extension<Ecofen>()->updateLinkUsage();
-
-	} else if (lnk_up) {
-
-		uplink_usage = lmm_constraint_get_usage(
-				this->up_link->pimpl_->constraint());
-
-		downlink_usage = lmm_constraint_get_usage(
-				this->down_link->pimpl_->constraint());
-
-		this->link_usage = downlink_usage + uplink_usage;
-
-	} else {
-
-		this->link_usage = lmm_constraint_get_usage(
-				this->up_link->pimpl_->constraint());
-
-	}
-}
 
 void Ecofen::initWattsRangeList() {
 
@@ -161,17 +123,18 @@ void Ecofen::initWattsRangeList() {
 					"could not retrieve idle and busy power values for link %s",
 			this->up_link->name());
 
-	const char* all_power_values_str = this->up_link->property("watts");
-
+	const char* all_power_values_str = this->up_link->property("watt_range");
+	XBT_DEBUG("watt range %s", all_power_values_str);
+	XBT_DEBUG("ECOFEN initWattsRangeList is called %s", this->up_link->name());
 	if (all_power_values_str == nullptr)
 		return;
-
-	std::vector < std::string > all_power_values;
+	XBT_DEBUG("ECOFEN 3 initWattsRangeList is called");
+	std::vector<std::string> all_power_values;
 	boost::split(all_power_values, all_power_values_str, boost::is_any_of(","));
 
 	for (auto current_power_values_str : all_power_values) {
 		/* retrieve the power values associated */
-		std::vector < std::string > current_power_values;
+		std::vector<std::string> current_power_values;
 		boost::split(current_power_values, current_power_values_str,
 				boost::is_any_of(":"));
 		xbt_assert(current_power_values.size() == 2,
@@ -190,126 +153,49 @@ void Ecofen::initWattsRangeList() {
 				(current_power_values.at(0)).c_str(), idle);
 		double busyVal = xbt_str_parse_double(
 				(current_power_values.at(1)).c_str(), busy);
+		XBT_DEBUG("Ecofen: initWattsRangeList: idle %f, busy %f", idleVal,
+				busyVal);
 		xbt_free(idle);
 		xbt_free(busy);
 
 		this->power_range_watts_list.push_back(
 				LinkPowerRange(idleVal, busyVal));
+		XBT_DEBUG("ECOFEN 3 initWattsRangeList is called");
+
 	}
 
 }
 
-double Ecofen::getLastUpdated() {
-	return this->last_updated;
-}
-
-double Ecofen::getCurrntTime() {
-	return surf_get_clock();
-}
-
-double Ecofen::getLinkUsage() {
-	return this->link_usage;
-}
-double Ecofen::getLinkIdlePower(){
-	return this->power_range_watts_list[0].idle;
-}
 }
 }
 
 using simgrid::plugin::Ecofen;
 
-void init_ecofen(simgrid::s4u::Link &link){
-	Ecofen *link_energy = link.extension<Ecofen>();
-	double byteEnergy = 3.423; //byte energy in nJoule
-	double linkIdlePower = link_energy->getLinkIdlePower(); //idle power for a link
-	XBT_INFO("idle power %f",linkIdlePower);
-	ecofen_init_basic_model(0.0,byteEnergy); // node idle power and byte enery value in nJoule
-	ecofen_init_linear_model(linkIdlePower); //idle power for the net device
-	ecofen_init_log(1.0, 3.0); //log time interval and log end time
-}
-
 /* **************************** events  callback *************************** */
-static void onCreation(simgrid::s4u::Link& link) {
-	XBT_DEBUG("onCreation is called for link: %s", link.name());
-	link.extension_set(new Ecofen(&link));
-	//init_ecofen(link);
-}
 
-static void onCommunicate(simgrid::surf::NetworkAction* action,
-		simgrid::s4u::Host* src, simgrid::s4u::Host* dst) {
-	XBT_INFO("onCommunicate is called src %s -> dst %s", src->cname(),dst->cname());
-
-	/*for (simgrid::surf::LinkImpl* link : action->links()) {
-
-		if (link == nullptr)
-			continue;
-
-		// Get the link_energy extension for the relevant link
-		Ecofen* link_energy = link->piface_.extension<Ecofen>();
-		link_energy->initWattsRangeList();
-		link_energy->update();
-	}*/
-}
-
-static void onLinkStateChange(simgrid::s4u::Link &link) {
-	XBT_DEBUG("onLinkStateChange is called for link: %s", link.name());
-
-	Ecofen *link_energy = link.extension<Ecofen>();
-	link_energy->update();
-}
-
-static void onLinkDestruction(simgrid::s4u::Link& link) {
-	XBT_DEBUG("onLinkDestruction is called for link: %s", link.name());
-}
-
-static void onSimulationEnd() {
-	XBT_DEBUG("onSimulationEnd is called ...");
-}
 /* **************************** Public interface *************************** */
 SG_BEGIN_DECL()
 /** \ingroup SURF_plugin_energy
  * \brief Enable energy plugin
  * \details Enable energy plugin to get joules consumption of each cpu. You should call this function before #MSG_init().
  */
+
+void init_ns3() {
+	ns3_initialize("default");
+	ns3_simulator(10);
+}
+
+void init_ecofen(double netDeviceIdleValue) {
+
+	double byteEnergy = 3.423; //byte energy in nJoule
+	ecofen_init_basic_model(0.0, byteEnergy); // node idle power and byte energy value in nJoule
+	ecofen_init_log(1.0, 2.0); //log time interval and log end time
+	ecofen_init_linear_model(netDeviceIdleValue); //idle power for the net device
+}
+
 void ns3_link_energy_plugin_init() {
-	if (Ecofen::EXTENSION_ID.valid())
-	return;
-
-	Ecofen::EXTENSION_ID =
-	simgrid::s4u::Link::extension_create<Ecofen>();
-
-	simgrid::s4u::Link::onCreation.connect(&onCreation);
-	simgrid::s4u::Link::onDestruction.connect(&onLinkDestruction);
-	simgrid::s4u::Link::onCommunicate.connect(&onCommunicate);
-	simgrid::s4u::onSimulationEnd.connect(&onSimulationEnd);
-
+	init_ecofen(10.242);
 }
 
-/** @brief Returns the total energy consumed by the link so far (in Joules)
- *
- *  See also @ref SURF_plugin_energy.
- */
-double ns3_link_get_consumed_energy(sg_link_t link) {
-	xbt_assert(Ecofen::EXTENSION_ID.valid(),
-			"The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
-
-	return 0.0;
-}
-
-double ns3_link_get_consumed_power(sg_link_t link) {
-	xbt_assert(Ecofen::EXTENSION_ID.valid(),
-			"The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
-	return 0.0;
-}
-
-double ns3_link_get_usage(sg_link_t link) {
-	xbt_assert(Ecofen::EXTENSION_ID.valid(),
-			"The Energy plugin is not active. Please call sg_energy_plugin_init() during initialization.");
-	return 0.0;
-}
-
-void ns3_on_simulation_end() {
-	onSimulationEnd();
-}
 SG_END_DECL()
 

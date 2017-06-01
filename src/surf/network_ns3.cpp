@@ -50,11 +50,11 @@ static ns3::LinearNetdeviceEnergyHelper linearNetdeviceEnergy;
 static ns3::ConsumptionLogger conso;
 
 static double nodeIdlePower = 0.0;
-static double netDeviceIdlePower = 6.0;
+static double netDeviceIdlePower = 7.0;
 static double basicByteEnergy = 3.423;
 
 static double consLogTimeInterval = 1.0;
-static double consLogEndTime = 3.0;
+static double consLogEndTime = 2.0;
 // End of Ecofen
 
 simgrid::xbt::Extension<simgrid::kernel::routing::NetPoint, NetPointNs3> NetPointNs3::EXTENSION_ID;
@@ -176,7 +176,6 @@ static void postparse_cb() {
 void surf_network_model_init_NS3() {
 	if (surf_network_model)
 		return;
-
 	surf_network_model = new simgrid::surf::NetworkNS3Model();
 	all_existing_models->push_back(surf_network_model);
 }
@@ -194,16 +193,14 @@ NetworkNS3Model::NetworkNS3Model() :
 
 	ns3_initialize(ns3_tcp_model.get().c_str());
 
-
 	simgrid::kernel::routing::NetPoint::onCreation.connect(
 			[](simgrid::kernel::routing::NetPoint* pt) {
 				pt->extension_set<NetPointNs3>(new NetPointNs3());
-				  XBT_VERB("SimGrid's %s is node %d within NS3", pt->cname(), pt->extension<NetPointNs3>()->node_num);
+				XBT_VERB("SimGrid's %s is node %d within NS3", pt->cname(), pt->extension<NetPointNs3>()->node_num);
 			});
 	simgrid::surf::on_cluster.connect(&clusterCreation_cb);
 	simgrid::s4u::onPlatformCreated.connect(&postparse_cb);
 	simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
-
 
 	LogComponentEnable("UdpEchoClientApplication", ns3::LOG_LEVEL_INFO);
 	LogComponentEnable("UdpEchoServerApplication", ns3::LOG_LEVEL_INFO);
@@ -348,66 +345,35 @@ NetworkNS3Action::NetworkNS3Action(Model* model, double size, s4u::Host* src,
 	s4u::Link::onCommunicate(this, src, dst);
 }
 
-<<<<<<< HEAD
- void NetworkNS3Action::suspend() {
- THROW_UNIMPLEMENTED;
- }
+void NetworkNS3Action::suspend() {
+	THROW_UNIMPLEMENTED;
+}
 
- void NetworkNS3Action::resume() {
- THROW_UNIMPLEMENTED;
- }
-
-/** @brief returns a list of all Links that this action is using */
-std::list<LinkImpl*> NetworkNS3Action::links() {
-	std::list<LinkImpl*> retlist;
-	lmm_system_t sys = getModel()->getMaxminSystem();
-	int llen = lmm_get_number_of_cnst_from_var(sys, variable_);
-
-	for (int i = 0; i < llen; i++) {
-		/* Beware of composite actions: ptasks put links and cpus together */
-		// extra pb: we cannot dynamic_cast from void*...
-		Resource* resource = static_cast<Resource*>(lmm_constraint_id(
-				lmm_get_cnst_from_var(sys, getVariable(), i)));
-		LinkImpl* link = dynamic_cast<LinkImpl*>(resource);
-		if (link != nullptr)
-			retlist.push_back(link);
-	}
-
-	return retlist;
-=======
 void NetworkNS3Action::resume() {
-  THROW_UNIMPLEMENTED;
+	THROW_UNIMPLEMENTED;
 }
 
-std::list<LinkImpl*> NetworkNS3Action::links()
-{
-  THROW_UNIMPLEMENTED;
-  return nullptr;
->>>>>>> upstream/master
+std::list<LinkImpl*> NetworkNS3Action::links() {
+	THROW_UNIMPLEMENTED;
 }
-/*
- std::list<LinkImpl*> NetworkNS3Action::links() {
- THROW_UNIMPLEMENTED;
- }*/
 
 /* Test whether a flow is suspended */
-/*
- bool NetworkNS3Action::isSuspended() {
- return false;
- }
- */
- int NetworkNS3Action::unref() {
- refcount_--;
- if (not refcount_) {
- if (action_hook.is_linked())
- stateSet_->erase(stateSet_->iterator_to(*this));
- XBT_DEBUG("Removing action %p", this);
- delete this;
- return 1;
- }
- return 0;
- }
 
+bool NetworkNS3Action::isSuspended() {
+	return false;
+}
+
+int NetworkNS3Action::unref() {
+	refcount_--;
+	if (not refcount_) {
+		if (action_hook.is_linked())
+			stateSet_->erase(stateSet_->iterator_to(*this));
+		XBT_DEBUG("Removing action %p", this);
+		delete this;
+		return 1;
+	}
+	return 0;
+}
 
 }
 }
@@ -485,13 +451,13 @@ void ns3_initialize(const char* TcpProtocol) {
 		return;
 	}
 	if (not strcmp(TcpProtocol, "NewReno")) {
-		XBT_INFO("Switching Tcp protocol to '%s'", TcpProtocol);
+		XBT_DEBUG("Switching Tcp protocol to '%s'", TcpProtocol);
 		ns3::Config::SetDefault("ns3::TcpL4Protocol::SocketType",
 				ns3::StringValue("ns3::TcpNewReno"));
 		return;
 	}
 	if (not strcmp(TcpProtocol, "Tahoe")) {
-		XBT_INFO("Switching Tcp protocol to '%s'", TcpProtocol);
+		XBT_DEBUG("Switching Tcp protocol to '%s'", TcpProtocol);
 		ns3::Config::SetDefault("ns3::TcpL4Protocol::SocketType",
 				ns3::StringValue("ns3::TcpTahoe"));
 		return;
@@ -567,10 +533,11 @@ void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, char* bw, char* lat) {
 
 	// Ecofen Linear model configuration
 	linearNetdeviceEnergy.Set("IdleConso",
-			ns3::DoubleValue(netDeviceIdlePower));
+	ns3::DoubleValue(netDeviceIdlePower));
 	linearNetdeviceEnergy.Set("OffConso", ns3::DoubleValue(0.0));
 	linearNetdeviceEnergy.Set("ByteEnergy", ns3::DoubleValue(basicByteEnergy)); // energy consumed by a single byte in nJoule
 	linearNetdeviceEnergy.Install(netA);
+
 	// End of Ecofen
 
 	char * adr = bprintf("%d.%d.0.0", number_of_networks, number_of_links);

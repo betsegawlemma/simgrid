@@ -48,7 +48,7 @@ class XBT_PRIVATE NetworkNS3Action : public NetworkAction {
 public:
   NetworkNS3Action(Model* model, double cost, s4u::Host* src, s4u::Host* dst);
 
-  // bool isSuspended();
+  bool isSuspended();
   int unref() override;
   void suspend() override;
   void resume() override;

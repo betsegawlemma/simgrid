@@ -9,6 +9,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 link_directories(${CMAKE_SOURCE_DIR}/lib /opt/ns3/lib)
 
-set(SIMULATOR_SOURCES s4u_energy-consumption.cpp)
-add_executable(s4u_energy-consumption ${SIMULATOR_SOURCES})
-target_link_libraries(s4u_energy-consumption simgrid)
+add_executable(sg_energy_consumption sg_energy_consumption.cpp)
+add_executable(ns3_energy_consumption ns3_energy_consumption.cpp)
+target_link_libraries(ns3_energy_consumption simgrid)
+target_link_libraries(sg_energy_consumption simgrid)
