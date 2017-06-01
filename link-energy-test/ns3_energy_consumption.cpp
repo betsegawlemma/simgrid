@@ -81,6 +81,8 @@ public:
 	}
 };
 
+extern bool isNS3ON;
+
 int main(int argc, char* argv[]) {
 
         ns3_link_energy_plugin_init();

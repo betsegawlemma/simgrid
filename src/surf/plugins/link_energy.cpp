@@ -37,7 +37,7 @@
  and then use the following function to retrieve the consumption of a given link: MSG_link_get_consumed_energy().
  */
 
-XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_link_energy, surf,
+XBT_LOG_NEW_DEFAULT_SUBCATEGORY(link_energy, surf,
 		"Logging specific to the SURF LinkEnergy plugin");
 
 namespace simgrid {
@@ -166,6 +166,18 @@ void LinkEnergy::updateLinkUsage() {
 	}
 }
 
+void LinkEnergy::updateALinkTotalEnergy() {
+
+	computeALinkTotalPower();
+
+	double start_time = this->last_updated;
+	double finish_time = surf_get_clock();
+	this->last_updated = finish_time;
+	this->a_link_total_energy[this->up_link->name()] +=
+			this->a_link_total_power[this->up_link->name()]
+					* (finish_time - start_time);
+}
+
 void LinkEnergy::initWattsRangeList() {
 
 	if (!power_range_watts_list.empty())
@@ -176,7 +188,7 @@ void LinkEnergy::initWattsRangeList() {
 					"could not retrieve idle and busy power values for link %s",
 			this->up_link->name());
 
-	const char* all_power_values_str = this->up_link->property("watts");
+	const char* all_power_values_str = this->up_link->property("watt_range");
 
 	if (all_power_values_str == nullptr)
 		return;
@@ -205,10 +217,12 @@ void LinkEnergy::initWattsRangeList() {
 				(current_power_values.at(0)).c_str(), idle);
 		double busyVal = xbt_str_parse_double(
 				(current_power_values.at(1)).c_str(), busy);
+
 		xbt_free(idle);
 		xbt_free(busy);
 
-		this->power_range_watts_list.push_back(LinkPowerRange(idleVal, busyVal));
+		this->power_range_watts_list.push_back(
+				LinkPowerRange(idleVal, busyVal));
 		// set the idle value for each link
 		this->a_link_total_power[this->up_link->name()] = idleVal;
 		initALinkTotalEnergy();
@@ -260,18 +274,6 @@ void LinkEnergy::computeALinkTotalPower() {
 	this->a_link_total_power[this->up_link->name()] +=
 			computeALinkDynamicPower();
 
-}
-
-void LinkEnergy::updateALinkTotalEnergy() {
-
-	computeALinkTotalPower();
-
-	double start_time = this->last_updated;
-	double finish_time = surf_get_clock();
-	this->last_updated = finish_time;
-	this->a_link_total_energy[this->up_link->name()] +=
-			this->a_link_total_power[this->up_link->name()]
-					* (finish_time - start_time);
 }
 
 void LinkEnergy::initALinkTotalEnergy() {
@@ -410,9 +412,9 @@ SG_BEGIN_DECL()
  * \details Enable energy plugin to get joules consumption of each cpu. You should call this function before #MSG_init().
  */
 void sg_link_energy_plugin_init() {
+
 	if (LinkEnergy::EXTENSION_ID.valid())
 		return;
-
 	LinkEnergy::EXTENSION_ID =
 			simgrid::s4u::Link::extension_create<LinkEnergy>();
 
