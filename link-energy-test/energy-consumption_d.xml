@@ -3,10 +3,10 @@
 <platform version="4.1">
 
 	<!-- The master process (with some arguments) -->
-	<process host="H1" function="sender">
-		<argument value="1E6" />   <!-- Comm size of tasks -->
+	<process host="H-0" function="sender">
+		<argument value="10E6" />   <!-- Comm size of tasks -->
 	</process>
 	<!-- The worker process (with no argument) -->
-	<process host="H2" function="receiver" on_failure="RESTART">
+	<process host="H-2" function="receiver" on_failure="RESTART">
 	</process>
 </platform>

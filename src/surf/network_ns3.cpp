@@ -537,7 +537,6 @@ void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, char* bw, char* lat) {
 	linearNetdeviceEnergy.Set("OffConso", ns3::DoubleValue(0.0));
 	linearNetdeviceEnergy.Set("ByteEnergy", ns3::DoubleValue(basicByteEnergy)); // energy consumed by a single byte in nJoule
 	linearNetdeviceEnergy.Install(netA);
-
 	// End of Ecofen
 
 	char * adr = bprintf("%d.%d.0.0", number_of_networks, number_of_links);
