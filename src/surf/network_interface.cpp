@@ -16,38 +16,43 @@ XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_network, surf,
 		"Logging specific to the SURF network module");
 
 namespace simgrid {
-namespace surf {
 
-/* List of links */
-std::unordered_map<std::string, LinkImpl*>* LinkImpl::links =
-		new std::unordered_map<std::string, LinkImpl*>();
+  namespace surf {
 
-LinkImpl* LinkImpl::byName(const char* name) {
-	if (links->find(name) == links->end())
-		return nullptr;
-	return links->at(name);
-}
-/** @brief Returns the amount of links in the platform */
-int LinkImpl::linksCount() {
-	return links->size();
-}
-/** @brief Returns a list of all existing links */
-LinkImpl** LinkImpl::linksList() {
-	LinkImpl** res = xbt_new(LinkImpl*, (int )links->size());
-	int i = 0;
-	for (auto kv : *links) {
-		res[i] = kv.second;
-		i++;
-	}
-	return res;
-}
-/** @brief destructor of the static data */
-void LinkImpl::linksExit() {
-	for (auto kv : *links)
-		(kv.second)->destroy();
-	delete links;
-}
-}
+  /* List of links */
+  std::unordered_map<std::string, LinkImpl*>* LinkImpl::links = new std::unordered_map<std::string, LinkImpl*>();
+
+  LinkImpl* LinkImpl::byName(const char* name)
+  {
+    if (links->find(name) == links->end())
+      return nullptr;
+    return links->at(name);
+  }
+  /** @brief Returns the amount of links in the platform */
+  int LinkImpl::linksCount()
+  {
+    return links->size();
+  }
+  /** @brief Returns a list of all existing links */
+  LinkImpl** LinkImpl::linksList()
+  {
+    LinkImpl** res = xbt_new(LinkImpl*, (int)links->size());
+    int i          = 0;
+    for (auto kv : *links) {
+      res[i] = kv.second;
+      i++;
+    }
+    return res;
+  }
+  /** @brief destructor of the static data */
+  void LinkImpl::linksExit()
+  {
+    for (auto kv : *links)
+      (kv.second)->destroy();
+    delete links;
+  }
+  }
+
 }
 
 /*********
