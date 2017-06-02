@@ -79,7 +79,7 @@ NetPointNs3::NetPointNs3() {
  * Callbacks *
  *************/
 
-<<<<<<< HEAD
+
 static void clusterCreation_cb(sg_platf_cluster_cbarg_t cluster) {
 	char* lat = bprintf("%fs", cluster->lat);
 	char* bw = bprintf("%fBps", cluster->bw);
@@ -161,80 +161,7 @@ static void routeCreation_cb(bool symmetrical,
 					link_list->size());
 		warned_about_long_routes = true;
 	}
-=======
-static void clusterCreation_cb(sg_platf_cluster_cbarg_t cluster)
-{
-  char* lat = bprintf("%fs", cluster->lat);
-  char* bw  = bprintf("%fBps", cluster->bw);
 
-  for (int i : *cluster->radicals) {
-    // Routers don't create a router on the other end of the private link by themselves.
-    // We just need this router to be given an ID so we create a temporary NetPointNS3 so that it gets one
-    NetPointNs3* host_dst = new NetPointNs3();
-
-    // Create private link
-    char* host_id = bprintf("%s%d%s", cluster->prefix, i, cluster->suffix);
-    NetPointNs3* host_src = sg_host_by_name(host_id)->pimpl_netpoint->extension<NetPointNs3>();
-    xbt_assert(host_src, "Cannot find a NS3 host of name %s", host_id);
-
-    // Any NS3 route is symmetrical
-    ns3_add_link(host_src, host_dst, bw, lat);
-
-    delete host_dst;
-    free(host_id);
-  }
-  xbt_free(lat);
-  xbt_free(bw);
-
-  //Create link backbone
-  lat = bprintf("%fs", cluster->bb_lat);
-  bw =  bprintf("%fBps", cluster->bb_bw);
-  ns3_add_cluster(cluster->id, bw, lat);
-  xbt_free(lat);
-  xbt_free(bw);
-}
-
-static void routeCreation_cb(bool symmetrical, simgrid::kernel::routing::NetPoint* src,
-                             simgrid::kernel::routing::NetPoint* dst, simgrid::kernel::routing::NetPoint* gw_src,
-                             simgrid::kernel::routing::NetPoint* gw_dst,
-                             std::vector<simgrid::surf::LinkImpl*>* link_list)
-{
-  if (link_list->size() == 1) {
-    simgrid::surf::LinkNS3* link = static_cast<simgrid::surf::LinkNS3*>(link_list->at(0));
-
-    XBT_DEBUG("Route from '%s' to '%s' with link '%s' %s", src->cname(), dst->cname(), link->cname(),
-              (symmetrical ? "(symmetrical)" : "(not symmetrical)"));
-    char* link_bdw = bprintf("%fBps", link->bandwidth());
-    char* link_lat = bprintf("%fs", link->latency());
-
-    //   XBT_DEBUG("src (%s), dst (%s), src_id = %d, dst_id = %d",src,dst, src_id, dst_id);
-    XBT_DEBUG("\tLink (%s) bdw:%s lat:%s", link->cname(), link_bdw, link_lat);
-
-    // create link ns3
-    NetPointNs3* host_src = src->extension<NetPointNs3>();
-    NetPointNs3* host_dst = dst->extension<NetPointNs3>();
-
-    xbt_assert(host_src != nullptr, "Network element %s does not seem to be NS3-ready", src->cname());
-    xbt_assert(host_dst != nullptr, "Network element %s does not seem to be NS3-ready", dst->cname());
-
-    // Any NS3 route is symmetrical
-    ns3_add_link(host_src, host_dst, link_bdw, link_lat);
-
-    xbt_free(link_bdw);
-    xbt_free(link_lat);
-  } else {
-    static bool warned_about_long_routes = false;
-
-    if (not warned_about_long_routes)
-      XBT_WARN("Ignoring a route between %s and %s of length %zu: Only routes of length 1 are considered with NS3.\n"
-               "WARNING: You can ignore this warning if your hosts can still communicate when only considering routes "
-               "of length 1.\n"
-               "WARNING: Remove long routes to avoid this harmless message; subsequent long routes will be silently "
-               "ignored.",
-               src->cname(), dst->cname(), link_list->size());
-    warned_about_long_routes = true;
-  }
->>>>>>> upstream/master
 }
 
 /* Create the ns3 topology based on routing strategy */
@@ -268,16 +195,7 @@ NetworkNS3Model::NetworkNS3Model() :
 
 	ns3_initialize(ns3_tcp_model.get().c_str());
 
-<<<<<<< HEAD
-	simgrid::kernel::routing::NetPoint::onCreation.connect(
-			[](simgrid::kernel::routing::NetPoint* pt) {
-				pt->extension_set<NetPointNs3>(new NetPointNs3());
-				XBT_VERB("SimGrid's %s is node %d within NS3", pt->cname(), pt->extension<NetPointNs3>()->node_num);
-			});
-	simgrid::surf::on_cluster.connect(&clusterCreation_cb);
-	simgrid::s4u::onPlatformCreated.connect(&postparse_cb);
-	simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
-=======
+
   simgrid::kernel::routing::NetPoint::onCreation.connect([](simgrid::kernel::routing::NetPoint* pt) {
     pt->extension_set<NetPointNs3>(new NetPointNs3());
     XBT_VERB("SimGrid's %s is known as node %d within NS3", pt->cname(), pt->extension<NetPointNs3>()->node_num);
@@ -285,7 +203,7 @@ NetworkNS3Model::NetworkNS3Model() :
   simgrid::surf::on_cluster.connect(&clusterCreation_cb);
   simgrid::s4u::onPlatformCreated.connect(&postparse_cb);
   simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
->>>>>>> upstream/master
+
 
 	LogComponentEnable("UdpEchoClientApplication", ns3::LOG_LEVEL_INFO);
 	LogComponentEnable("UdpEchoServerApplication", ns3::LOG_LEVEL_INFO);
