@@ -359,12 +359,13 @@ double computeTransferTime(simgrid::s4u::Link* link) {
 	return total_time;
 }
 
-void computAndDisplayTotalEnergy() {
+static void computAndDisplayTotalEnergy() {
 	simgrid::s4u::Link* link = nullptr;
 	sg_link_t* link_list = link->listLink();
 	int link_count = link->linkCount();
 	double total_power = 0.0; // Total power consumption (whole platform)
 	double total_energy = 0.0;
+//	double used_links_power = 0.0; // Power consumed by links who participated in communication task
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
 			double a_link_average_power =
