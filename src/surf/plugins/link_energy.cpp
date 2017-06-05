@@ -365,15 +365,17 @@ static void computAndDisplayTotalEnergy() {
 	int link_count = link->linkCount();
 	double total_power = 0.0; // Total power consumption (whole platform)
 	double total_energy = 0.0;
+	double total_time = 0.0;
 //	double used_links_power = 0.0; // Power consumed by links who participated in communication task
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
 			double a_link_average_power =
 					link_list[i]->extension<LinkEnergy>()->getAveragePower(
 							link_list[i]);
+			total_time += computeTransferTime(link_list[i]);
 			double a_link_total_energy = a_link_average_power
 					* (computeTransferTime(link_list[i]));
-			total_power += a_link_average_power;
+			total_power += a_link_average_power * 2; // a link average power is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
 			total_energy += a_link_total_energy;
 			const char* name = link_list[i]->name();
 			if (strcmp(name, "__loopback__")) {
@@ -384,7 +386,7 @@ static void computAndDisplayTotalEnergy() {
 			}
 		}
 	}
-	XBT_INFO("TotalPower %f TotalEnergy %f", total_power, total_energy);
+	XBT_INFO("TotalPower %f TotalEnergy %f ComputedTransferTime %f", total_power, total_energy, total_time);
 	xbt_free(link_list);
 }
 
