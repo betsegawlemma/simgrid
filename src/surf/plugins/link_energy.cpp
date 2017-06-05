@@ -350,8 +350,10 @@ double computeTransferTime(simgrid::s4u::Link* link) {
 	 * Total_time = Transfer_Time1 + Transfer_Time2
 	 */
 
+	double totalBytes = link_energy->getTotalBytes(link);
+	totalBytes = std::pow(totalBytes,1.08);
 	double transfer_time_traffic = 0.1525936
-			* ((link_energy->getTotalBytes(link)) * 1E-6) + 0.1513248;
+			* (totalBytes * 1E-6) + 0.1513248;
 	double transfer_time_latency = 0.168000 * (latency * 1E-3) + 0.000135;
 
 	double total_time = transfer_time_traffic + transfer_time_latency;
