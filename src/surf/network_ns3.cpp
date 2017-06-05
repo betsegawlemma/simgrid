@@ -143,8 +143,8 @@ static void routeCreation_cb(bool symmetrical,
 				dst->cname());
 
 		ns3_add_link(host_src, host_dst, link_bdw, link_lat);
-		if (symmetrical)
-			ns3_add_link(host_dst, host_src, link_bdw, link_lat);
+		/*if (symmetrical)
+			ns3_add_link(host_dst, host_src, link_bdw, link_lat);*/
 
 		xbt_free(link_bdw);
 		xbt_free(link_lat);
