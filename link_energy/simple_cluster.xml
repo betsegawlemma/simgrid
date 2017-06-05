@@ -1,0 +1,29 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
+<platform version="4.1">
+<AS id="AS0" routing="Full">
+  <host id="H-0" speed="1Gf"/>
+  <host id="H-1" speed="1Gf"/>
+  <host id="H-2" speed="1Gf"/>
+  <host id="H-3" speed="1Gf"/>
+  <host id="H-4" speed="1Gf"/>
+  <router id="H-acme_router"/>
+  <link id="acme_link_0" bandwidth="1GBps" latency="10ms"><prop id="watt_range" value="10.3581:10.7479"/></link>
+  <link id="acme_link_1" bandwidth="1GBps" latency="10ms"><prop id="watt_range" value="10.3581:10.7479"/></link>
+  <link id="acme_link_2" bandwidth="1GBps" latency="10ms"><prop id="watt_range" value="10.3581:10.7479"/></link>
+  <link id="acme_link_3" bandwidth="1GBps" latency="10ms"><prop id="watt_range" value="10.3581:10.7479"/></link>
+  <link id="acme_link_4" bandwidth="1GBps" latency="10ms"><prop id="watt_range" value="10.3581:10.7479"/></link>
+  <route src="H-0" dst="H-1">
+  <link_ctn id="acme_link_0"/>
+  </route>
+  <route src="H-1" dst="H-acme_router">
+  <link_ctn id="acme_link_1"/>
+  </route>
+  <route src="H-acme_router" dst="H-2">
+  <link_ctn id="acme_link_2"/>
+  </route>
+  <route src="H-2" dst="H-3">
+  <link_ctn id="acme_link_3"/>
+  </route>
+</AS>
+</platform>
