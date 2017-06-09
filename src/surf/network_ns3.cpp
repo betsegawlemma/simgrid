@@ -124,7 +124,7 @@ static void routeCreation_cb(bool symmetrical,
 		XBT_DEBUG("Route from '%s' to '%s' with link '%s' %s", src->cname(),
 				dst->cname(), link->cname(),
 				(symmetrical ? "(symmetrical)" : "(not symmetrical)"));
-		char* link_bdw = bprintf("%fBps", link->bandwidth());
+		char* link_bdw = bprintf("%.0fbps", link->bandwidth()/8.0);
 		char* link_lat = bprintf("%fs", link->latency());
 
 		//   XBT_DEBUG("src (%s), dst (%s), src_id = %d, dst_id = %d",src,dst, src_id, dst_id);

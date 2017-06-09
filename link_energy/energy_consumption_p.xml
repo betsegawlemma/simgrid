@@ -11,13 +11,13 @@
 		</host>
                 <router id="R1"/>
                 <router id="R2"/>
-		<link id="L1" bandwidth="1000MBps" latency="10ms">
+		<link id="L1" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
-                <link id="L2" bandwidth="1000MBps" latency="10ms">
+                <link id="L2" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
-                <link id="L3" bandwidth="1000MBps" latency="10ms">
+                <link id="L3" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
 		<route src="H-0" dst="H-2">
