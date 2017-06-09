@@ -391,9 +391,10 @@ static void computAndDisplayTotalEnergy() {
 			}
 		}
 	}
-	total_energy = total_power * total_time;
+	double t = surf_get_clock();
+	total_energy = total_power * t;
 
-	XBT_INFO("TotalPower %f TotalEnergy %f ComputedTransferTime %f", total_power, total_energy, total_time);
+	XBT_INFO("TotalPower %f TotalEnergy %f ComputedTransferTime %f", total_power, total_energy, t);
 	xbt_free(link_list);
 }
 
