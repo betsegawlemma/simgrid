@@ -200,9 +200,10 @@ void LinkEnergy::initWattsRangeList() {
 
 		double idleVal = xbt_str_parse_double(
 				(current_power_values.at(0)).c_str(), idle);
+		       idleVal *= 2; // the idle value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
 		double busyVal = xbt_str_parse_double(
 				(current_power_values.at(1)).c_str(), busy);
-
+               busyVal *= 2; // the busy value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
 		this->power_range_watts_list.push_back(
 				LinkPowerRange(idleVal, busyVal));
 		this->a_link_average_power[this->link->name()] = idleVal;
@@ -241,8 +242,11 @@ void LinkEnergy::computeALinkAveragePower() {
 
 	if (this->last_updated > 0) {
 
-		dynamic_power = (this->current_link_usage / this->link->bandwidth())
-				* power_slope;
+
+
+		double normalized_link_usage = this->current_link_usage / this->link->bandwidth();
+		//normalized_link_usage = std::pow(normalized_link_usage,2.5);
+		dynamic_power = power_slope * normalized_link_usage;
 
 	} else {
 
@@ -250,8 +254,8 @@ void LinkEnergy::computeALinkAveragePower() {
 	}
 	double previous_power = this->a_link_average_power[this->link->name()];
 	double current_power = idle + dynamic_power;
-	this->a_link_average_power[this->link->name()] = (previous_power
-			+ current_power) / 2;
+	double average_power = (previous_power+ current_power) / 2;
+	this->a_link_average_power[this->link->name()] = average_power;
 
 	XBT_DEBUG(
 			"[computeDynamicPower:%s] idle_power=%f, busy_power=%f, slope=%f, dynamic_power=%f, link_load=%f",
@@ -344,21 +348,20 @@ double computeTransferTime(simgrid::s4u::Link* link) {
 	/*
 	 * compute actual time required to transfer this amount of bytes for a given latency (Experimentaly determined using NS-3 Simulator)
 	 *
-	 * Transfer_Time1 = 0.1525936 * Traffic +  0.1513248 (at fixed latency, bandwidth and packet_size)
+	 * Transfer_Time1 = 0.1525936 * Traffic +   0.6513248 (at fixed latency, bandwidth and packet_size)
 	 * Transfer_Time2 = 0.168000 * Latency (in ms) + 0.000135 (at fixed traffic, bandwidth and packet_size)
 	 *
 	 * Total_time = Transfer_Time1 + Transfer_Time2
 	 */
 
 	double totalBytes = link_energy->getTotalBytes(link);
-	totalBytes = std::pow(totalBytes,1.08);
 	double transfer_time_traffic = 0.1525936
-			* (totalBytes * 1E-6) + 0.1513248;
-	double transfer_time_latency = 0.168000 * (latency * 1E-3) + 0.000135;
+			* (totalBytes * 1E-6) + 0.6513248;
+	//double transfer_time_latency = 0.168000 * (latency * 1E-3) + 0.000135;
 
-	double total_time = transfer_time_traffic + transfer_time_latency;
+	double link_total_time = transfer_time_traffic;
 
-	return total_time;
+	return link_total_time;
 }
 
 static void computAndDisplayTotalEnergy() {
@@ -368,17 +371,17 @@ static void computAndDisplayTotalEnergy() {
 	double total_power = 0.0; // Total power consumption (whole platform)
 	double total_energy = 0.0;
 	double total_time = 0.0;
-//	double used_links_power = 0.0; // Power consumed by links who participated in communication task
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
 			double a_link_average_power =
 					link_list[i]->extension<LinkEnergy>()->getAveragePower(
 							link_list[i]);
-			total_time += computeTransferTime(link_list[i]);
+			double link_time = computeTransferTime(link_list[i]);
+			total_time += link_time;
 			double a_link_total_energy = a_link_average_power
-					* (computeTransferTime(link_list[i]));
-			total_power += a_link_average_power * 2; // a link average power is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
-			total_energy += a_link_total_energy;
+					* (link_time);
+			total_power += a_link_average_power;
+			//total_energy += a_link_total_energy;
 			const char* name = link_list[i]->name();
 			if (strcmp(name, "__loopback__")) {
 				XBT_INFO("%s Usage %f Bandwidth %f Power %f Energy %f", name,
@@ -388,6 +391,8 @@ static void computAndDisplayTotalEnergy() {
 			}
 		}
 	}
+	total_energy = total_power * total_time;
+
 	XBT_INFO("TotalPower %f TotalEnergy %f ComputedTransferTime %f", total_power, total_energy, total_time);
 	xbt_free(link_list);
 }
