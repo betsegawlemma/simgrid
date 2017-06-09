@@ -1,8 +1,8 @@
 <?xml version='1.0'?>
 <!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
 <platform version="4.1">
-	<process host="H-0" function="sender"><argument value="491E6"/></process>
-	<process host="H-0" function="sender"><argument value="326E6"/></process>
+	<process host="H-0" function="sender"><argument value="$T1"/></process>
+	<process host="H-0" function="sender"><argument value="$T2"/></process>
 	<process host="H-2" function="receiver" on_failure="RESTART"></process>
 	<process host="H-2" function="receiver" on_failure="RESTART"></process>
 </platform>
