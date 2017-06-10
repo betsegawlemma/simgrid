@@ -16,28 +16,26 @@
 namespace simgrid {
 namespace kernel {
 namespace activity {
-  class ActivityImpl;
-  XBT_PUBLIC(void) intrusive_ptr_add_ref(ActivityImpl* activity);
-  XBT_PUBLIC(void) intrusive_ptr_release(ActivityImpl* activity);
-}
-namespace routing {
-  class NetPoint;
-}
-}
-namespace simix {
-  class Host;
-}
-namespace surf {
-  class Resource;
-  class Cpu;
-  class LinkImpl;
-  class HostImpl;
-  class StorageImpl;
-}
-namespace trace_mgr {
-  class trace;
-  class future_evt_set;
-}
+class ActivityImpl;
+     }
+     namespace routing {
+     class NetPoint;
+     }
+  }
+  namespace simix {
+    class Host;
+  }
+  namespace surf {
+    class Resource;
+    class Cpu;
+    class LinkImpl;
+    class HostImpl;
+    class StorageImpl;
+  }
+  namespace trace_mgr {
+    class trace;
+    class future_evt_set;
+  }
 }
 
 typedef simgrid::s4u::NetZone simgrid_NetZone;
@@ -48,11 +46,9 @@ typedef simgrid::s4u::Link Link;
 typedef simgrid::s4u::Actor s4u_Actor;
 typedef simgrid::s4u::Host s4u_Host;
 typedef simgrid::s4u::Link s4u_Link;
-typedef simgrid::s4u::Storage s4u_Storage;
 typedef simgrid::s4u::NetZone s4u_NetZone;
 
 typedef simgrid::kernel::activity::ActivityImpl kernel_Activity;
-typedef simgrid::kernel::activity::ActivityImpl* smx_activity_t;
 typedef simgrid::kernel::routing::NetPoint routing_NetPoint;
 typedef simgrid::surf::Resource surf_Resource;
 typedef simgrid::trace_mgr::trace tmgr_Trace;
@@ -62,9 +58,8 @@ typedef simgrid::trace_mgr::trace tmgr_Trace;
 typedef struct s4u_Actor s4u_Actor;
 typedef struct s4u_Host s4u_Host;
 typedef struct s4u_Link s4u_Link;
-typedef struct s4u_Storage s4u_Storage;
 typedef struct s4u_NetZone s4u_NetZone;
-typedef struct kernel_Activity* smx_activity_t;
+typedef struct kernel_Activity kernel_Activity;
 typedef struct routing_NetPoint routing_NetPoint;
 typedef struct surf_Resource surf_Resource;
 typedef struct Trace tmgr_Trace;
@@ -84,10 +79,12 @@ typedef s4u_Link* sg_link_t;
 //typedef s4u_Link* sg_link_t;
 
 typedef kernel_Activity *smx_activity_t;
-typedef s4u_Storage* sg_storage_t;
 
 typedef routing_NetPoint* sg_netpoint_t;
 typedef surf_Resource *sg_resource_t;
+
+// Types which are in fact dictelmt:
+typedef struct s_xbt_dictelm *sg_storage_t;
 
 typedef tmgr_Trace *tmgr_trace_t; /**< Opaque structure defining an availability trace */
 

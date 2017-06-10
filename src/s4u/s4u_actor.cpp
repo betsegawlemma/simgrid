@@ -215,7 +215,6 @@ CommPtr isend(MailboxPtr chan, void* payload, double simulatedSize)
 {
   return Comm::send_async(chan, payload, simulatedSize);
 }
-
 void dsend(MailboxPtr chan, void* payload, double simulatedSize)
 {
   Comm::send_detached(chan, payload, simulatedSize);

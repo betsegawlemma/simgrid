@@ -5,7 +5,6 @@
 
 #include "../surf/StorageImpl.hpp"
 #include "simgrid/s4u/Host.hpp"
-#include "simgrid/s4u/Storage.hpp"
 #include "src/msg/msg_private.h"
 #include <numeric>
 
@@ -109,13 +108,14 @@ sg_size_t MSG_file_read(msg_file_t fd, sg_size_t size)
     return 0;
 
   /* Find the host where the file is physically located and read it */
-  msg_storage_t storage_src           = simgrid::s4u::Storage::byName(fd->storageId);
-  msg_host_t attached_host            = MSG_host_by_name(storage_src->host());
+  msg_storage_t storage_src           = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, fd->storageId));
+  msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
+  msg_host_t attached_host            = MSG_host_by_name(storage_priv_src->hostname);
   read_size                           = simcall_file_read(fd->simdata->smx_file, size, attached_host);
 
-  if (strcmp(storage_src->host(), MSG_host_self()->cname())) {
+  if (strcmp(storage_priv_src->hostname, MSG_host_self()->cname())) {
     /* the file is hosted on a remote host, initiate a communication between src and dest hosts for data transfer */
-    XBT_DEBUG("File is on %s remote host, initiate data transfer of %llu bytes.", storage_src->host(), read_size);
+    XBT_DEBUG("File is on %s remote host, initiate data transfer of %llu bytes.", storage_priv_src->hostname, read_size);
     msg_host_t m_host_list[] = {MSG_host_self(), attached_host};
     double flops_amount[]    = {0, 0};
     double bytes_amount[]    = {0, 0, static_cast<double>(read_size), 0};
@@ -150,12 +150,13 @@ sg_size_t MSG_file_write(msg_file_t fd, sg_size_t size)
     return 0;
 
   /* Find the host where the file is physically located (remote or local)*/
-  msg_storage_t storage_src = simgrid::s4u::Storage::byName(fd->storageId);
-  msg_host_t attached_host  = MSG_host_by_name(storage_src->host());
+  msg_storage_t storage_src           = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, fd->storageId));
+  msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
+  msg_host_t attached_host            = MSG_host_by_name(storage_priv_src->hostname);
 
-  if (strcmp(storage_src->host(), MSG_host_self()->cname())) {
+  if (strcmp(storage_priv_src->hostname, MSG_host_self()->cname())) {
     /* the file is hosted on a remote host, initiate a communication between src and dest hosts for data transfer */
-    XBT_DEBUG("File is on %s remote host, initiate data transfer of %llu bytes.", storage_src->host(), size);
+    XBT_DEBUG("File is on %s remote host, initiate data transfer of %llu bytes.", storage_priv_src->hostname, size);
     msg_host_t m_host_list[] = {MSG_host_self(), attached_host};
     double flops_amount[]    = {0, 0};
     double bytes_amount[]    = {0, static_cast<double>(size), 0, 0};
@@ -231,8 +232,9 @@ int MSG_file_close(msg_file_t fd)
 msg_error_t MSG_file_unlink(msg_file_t fd)
 {
   /* Find the host where the file is physically located (remote or local)*/
-  msg_storage_t storage_src           = simgrid::s4u::Storage::byName(fd->storageId);
-  msg_host_t attached_host            = MSG_host_by_name(storage_src->host());
+  msg_storage_t storage_src           = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, fd->storageId));
+  msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
+  msg_host_t attached_host            = MSG_host_by_name(storage_priv_src->hostname);
   int res                             = simcall_file_unlink(fd->simdata->smx_file, attached_host);
   __MSG_file_destroy(fd);
   return static_cast<msg_error_t>(res);
@@ -304,8 +306,9 @@ msg_error_t MSG_file_move (msg_file_t fd, const char* fullpath)
 msg_error_t MSG_file_rcopy (msg_file_t file, msg_host_t host, const char* fullpath)
 {
   /* Find the host where the file is physically located and read it */
-  msg_storage_t storage_src = simgrid::s4u::Storage::byName(file->storageId);
-  msg_host_t attached_host  = MSG_host_by_name(storage_src->host());
+  msg_storage_t storage_src = static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib, file->storageId));
+  msg_storage_priv_t storage_priv_src = MSG_storage_priv(storage_src);
+  msg_host_t attached_host = MSG_host_by_name(storage_priv_src->hostname);
   MSG_file_seek(file, 0, SEEK_SET);
   sg_size_t read_size = simcall_file_read(file->simdata->smx_file, file->size, attached_host);
 
@@ -326,22 +329,25 @@ msg_error_t MSG_file_rcopy (msg_file_t file, msg_host_t host, const char* fullpa
     if (not strcmp(file_mount_name, mount_name) && strlen(mount_name) > longest_prefix_length) {
       /* The current mount name is found in the full path and is bigger than the previous*/
       longest_prefix_length = strlen(mount_name);
-      storage_dest          = simgrid::s4u::Storage::byName(storage_name);
+      storage_dest          = (msg_storage_t)xbt_lib_get_elm_or_null(storage_lib, storage_name);
     }
     xbt_free(file_mount_name);
   }
   xbt_dict_free(&storage_list);
 
+  char* host_name_dest = nullptr;
   if(longest_prefix_length>0){
     /* Mount point found, retrieve the host the storage is attached to */
-    host_dest = MSG_host_by_name(storage_dest->host());
+    msg_storage_priv_t storage_dest_priv = MSG_storage_priv(storage_dest);
+    host_name_dest = (char*)storage_dest_priv->hostname;
+    host_dest = MSG_host_by_name(host_name_dest);
   }else{
     XBT_WARN("Can't find mount point for '%s' on destination host '%s'", fullpath, host->cname());
     return MSG_TASK_CANCELED;
   }
 
-  XBT_DEBUG("Initiate data transfer of %llu bytes between %s and %s.", read_size, storage_src->host(),
-            storage_dest->host());
+  XBT_DEBUG("Initiate data transfer of %llu bytes between %s and %s.", read_size, storage_priv_src->hostname,
+            host_name_dest);
   msg_host_t m_host_list[] = {attached_host, host_dest};
   double flops_amount[]    = {0, 0};
   double bytes_amount[]    = {0, static_cast<double>(read_size), 0, 0};
@@ -353,7 +359,7 @@ msg_error_t MSG_file_rcopy (msg_file_t file, msg_host_t host, const char* fullpa
 
   if(transfer != MSG_OK){
     if (transfer == MSG_HOST_FAILURE)
-      XBT_WARN("Transfer error, %s remote host just turned off!", storage_dest->host());
+      XBT_WARN("Transfer error, %s remote host just turned off!", host_name_dest);
     if (transfer == MSG_TASK_CANCELED)
       XBT_WARN("Transfer error, task has been canceled!");
 
@@ -397,6 +403,25 @@ void __MSG_file_destroy(msg_file_t file)
  * (#msg_storage_t) and the functions for managing it.
  */
 
+msg_storage_t __MSG_storage_create(smx_storage_t storage)
+{
+  msg_storage_priv_t storage_private = xbt_new0(s_msg_storage_priv_t, 1);
+
+  storage_private->name     = surf_storage_get_name(storage);
+  storage_private->hostname = surf_storage_get_host(storage);
+  storage_private->size     = surf_storage_get_size(storage);
+
+  xbt_lib_set(storage_lib, storage_private->name, MSG_STORAGE_LEVEL, storage_private);
+  return xbt_lib_get_elm_or_null(storage_lib, storage_private->name);
+}
+
+/**
+ * \brief Destroys a storage (internal call only)
+ */
+void __MSG_storage_destroy(msg_storage_priv_t storage) {
+  free(storage);
+}
+
 /** \ingroup msg_storage_management
  *
  * \brief Returns the name of the #msg_storage_t.
@@ -405,7 +430,8 @@ void __MSG_file_destroy(msg_file_t file)
  */
 const char *MSG_storage_get_name(msg_storage_t storage) {
   xbt_assert((storage != nullptr), "Invalid parameters");
-  return storage->name();
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  return priv->name;
 }
 
 /** \ingroup msg_storage_management
@@ -414,7 +440,7 @@ const char *MSG_storage_get_name(msg_storage_t storage) {
  * \return the free space size of the storage element (as a #sg_size_t)
  */
 sg_size_t MSG_storage_get_free_size(msg_storage_t storage){
-  return storage->sizeFree();
+  return simgrid::simix::kernelImmediate([storage] { return surf_storage_resource_priv(storage)->getFreeSize(); });
 }
 
 /** \ingroup msg_storage_management
@@ -423,7 +449,7 @@ sg_size_t MSG_storage_get_free_size(msg_storage_t storage){
  * \return the used space size of the storage element (as a #sg_size_t)
  */
 sg_size_t MSG_storage_get_used_size(msg_storage_t storage){
-  return storage->sizeUsed();
+  return simgrid::simix::kernelImmediate([storage] { return surf_storage_resource_priv(storage)->getUsedSize(); });
 }
 
 /** \ingroup msg_storage_management
@@ -434,7 +460,7 @@ sg_size_t MSG_storage_get_used_size(msg_storage_t storage){
 xbt_dict_t MSG_storage_get_properties(msg_storage_t storage)
 {
   xbt_assert((storage != nullptr), "Invalid parameters (storage is nullptr)");
-  return storage->properties();
+  return (simcall_storage_get_properties(storage));
 }
 
 /** \ingroup msg_storage_management
@@ -446,7 +472,7 @@ xbt_dict_t MSG_storage_get_properties(msg_storage_t storage)
  */
 void MSG_storage_set_property_value(msg_storage_t storage, const char* name, char* value)
 {
-  storage->setProperty(name, value);
+  xbt_dict_set(MSG_storage_get_properties(storage), name, value, nullptr);
 }
 
 /** \ingroup m_storage_management
@@ -458,7 +484,7 @@ void MSG_storage_set_property_value(msg_storage_t storage, const char* name, cha
  */
 const char *MSG_storage_get_property_value(msg_storage_t storage, const char *name)
 {
-  return storage->property(name);
+  return static_cast<char*>(xbt_dict_get_or_null(MSG_storage_get_properties(storage), name));
 }
 
 /** \ingroup msg_storage_management
@@ -468,16 +494,23 @@ const char *MSG_storage_get_property_value(msg_storage_t storage, const char *na
  */
 msg_storage_t MSG_storage_get_by_name(const char *name)
 {
-  return simgrid::s4u::Storage::byName(name);
+  return static_cast<msg_storage_t>(xbt_lib_get_elm_or_null(storage_lib,name));
 }
 
 /** \ingroup msg_storage_management
  * \brief Returns a dynar containing all the storage elements declared at a given point of time
  */
 xbt_dynar_t MSG_storages_as_dynar() {
+  xbt_lib_cursor_t cursor;
+  char *key;
+  void **data;
   xbt_dynar_t res = xbt_dynar_new(sizeof(msg_storage_t),nullptr);
-  for (auto s : *simgrid::s4u::allStorages()) {
-    xbt_dynar_push(res, &(s.second));
+
+  xbt_lib_foreach(storage_lib, cursor, key, data) {
+    if(xbt_lib_get_level(xbt_lib_get_elm_or_null(storage_lib, key), MSG_STORAGE_LEVEL) != nullptr) {
+      xbt_dictelm_t elm = xbt_dict_cursor_get_elm(cursor);
+      xbt_dynar_push(res, &elm);
+    }
   }
   return res;
 }
@@ -489,7 +522,8 @@ xbt_dynar_t MSG_storages_as_dynar() {
  */
 msg_error_t MSG_storage_set_data(msg_storage_t storage, void *data)
 {
-  storage->setUserdata(data);
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  priv->data = data;
   return MSG_OK;
 }
 
@@ -502,7 +536,8 @@ msg_error_t MSG_storage_set_data(msg_storage_t storage, void *data)
 void *MSG_storage_get_data(msg_storage_t storage)
 {
   xbt_assert((storage != nullptr), "Invalid parameters");
-  return storage->userdata();
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  return priv->data;
 }
 
 /** \ingroup msg_storage_management
@@ -513,7 +548,8 @@ void *MSG_storage_get_data(msg_storage_t storage)
  */
 xbt_dict_t MSG_storage_get_content(msg_storage_t storage)
 {
-  std::map<std::string, sg_size_t*>* content = storage->content();
+  std::map<std::string, sg_size_t*>* content =
+      simgrid::simix::kernelImmediate([storage] { return surf_storage_resource_priv(storage)->getContent(); });
   xbt_dict_t content_dict = xbt_dict_new_homogeneous(nullptr);
 
   for (auto entry : *content) {
@@ -530,7 +566,8 @@ xbt_dict_t MSG_storage_get_content(msg_storage_t storage)
  */
 sg_size_t MSG_storage_get_size(msg_storage_t storage)
 {
-  return storage->size();
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  return priv->size;
 }
 
 /** \ingroup msg_storage_management
@@ -541,7 +578,8 @@ sg_size_t MSG_storage_get_size(msg_storage_t storage)
  */
 const char *MSG_storage_get_host(msg_storage_t storage) {
   xbt_assert((storage != nullptr), "Invalid parameters");
-  return storage->host();
+  msg_storage_priv_t priv = MSG_storage_priv(storage);
+  return priv->hostname;
 }
 
 SG_END_DECL()
