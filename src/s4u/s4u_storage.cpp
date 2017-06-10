@@ -6,55 +6,73 @@
 #include "../surf/StorageImpl.hpp"
 #include "simgrid/s4u/Storage.hpp"
 #include "simgrid/simix.hpp"
+#include "xbt/lib.h"
 #include <unordered_map>
+
+extern xbt_lib_t storage_lib;
 
 namespace simgrid {
 namespace s4u {
-std::map<std::string, Storage*>* allStorages()
-{
-  std::unordered_map<std::string, surf::StorageImpl*>* map = surf::StorageImpl::storagesMap();
-  std::map<std::string, Storage*>* res                     = new std::map<std::string, Storage*>;
-  for (auto s : *map)
-    res->insert({s.first, &(s.second->piface_)}); // Convert each entry into its interface
 
-  return res;
+std::unordered_map<std::string, Storage*>* Storage::storages_ = new std::unordered_map<std::string, Storage*>();
+
+Storage::Storage(std::string name, smx_storage_t inferior) :
+    name_(name), pimpl_(inferior)
+{
+  hostname_ = surf_storage_get_host(pimpl_);
+  size_     = surf_storage_get_size(pimpl_);
+  storages_->insert({name, this});
 }
 
-Storage* Storage::byName(const char* name)
+Storage::~Storage() = default;
+
+smx_storage_t Storage::inferior()
 {
-  surf::StorageImpl* res = surf::StorageImpl::byName(name);
-  if (res == nullptr)
-    return nullptr;
-  return &res->piface_;
+  return pimpl_;
+}
+
+Storage& Storage::byName(const char* name)
+{
+  s4u::Storage* res = nullptr;
+  try {
+    res = storages_->at(name);
+  } catch (std::out_of_range& e) {
+    smx_storage_t inferior = xbt_lib_get_elm_or_null(storage_lib,name);
+    if (inferior == nullptr)
+      xbt_die("Storage %s does not exist. Please only use the storages that are defined in your platform.", name);
+
+    res = new Storage(name,inferior);
+  }
+  return *res;
 }
 
 const char* Storage::name()
 {
-  return pimpl_->cname();
+  return name_.c_str();
 }
 
 const char* Storage::host()
 {
-  return pimpl_->attach_;
+  return hostname_.c_str();
 }
 
 sg_size_t Storage::sizeFree()
 {
-  return simgrid::simix::kernelImmediate([this] { return pimpl_->getFreeSize(); });
+  return simgrid::simix::kernelImmediate([this] { return surf_storage_resource_priv(pimpl_)->getFreeSize(); });
 }
 
 sg_size_t Storage::sizeUsed()
 {
-  return simgrid::simix::kernelImmediate([this] { return pimpl_->getUsedSize(); });
+  return simgrid::simix::kernelImmediate([this] { return surf_storage_resource_priv(pimpl_)->getUsedSize(); });
 }
 
 sg_size_t Storage::size() {
-  return pimpl_->size_;
+  return size_;
 }
 
 xbt_dict_t Storage::properties()
 {
-  return simgrid::simix::kernelImmediate([this] { return pimpl_->getProperties(); });
+  return simcall_storage_get_properties(pimpl_);
 }
 
 const char* Storage::property(const char* key)
@@ -69,14 +87,13 @@ void Storage::setProperty(const char* key, char* value)
 
 std::map<std::string, sg_size_t*>* Storage::content()
 {
-  return simgrid::simix::kernelImmediate([this] { return pimpl_->getContent(); });
+  return simgrid::simix::kernelImmediate([this] { return surf_storage_resource_priv(this->pimpl_)->getContent(); });
 }
 
-/*************
- * Callbacks *
- *************/
-simgrid::xbt::signal<void(s4u::Storage&)> Storage::onCreation;
-simgrid::xbt::signal<void(s4u::Storage&)> Storage::onDestruction;
+std::unordered_map<std::string, Storage*>* Storage::allStorages()
+{
+  return storages_;
+}
 
 } /* namespace s4u */
 } /* namespace simgrid */

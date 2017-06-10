@@ -256,6 +256,11 @@ int find_model_description(s_surf_model_description_t * table,
   return -1;
 }
 
+static inline void surf_storage_free(void *r)
+{
+  delete static_cast<simgrid::surf::StorageImpl*>(r);
+}
+
 void sg_version_check(int lib_version_major, int lib_version_minor, int lib_version_patch)
 {
   if ((lib_version_major != SIMGRID_VERSION_MAJOR) || (lib_version_minor != SIMGRID_VERSION_MINOR)) {
@@ -340,7 +345,11 @@ void surf_init(int *argc, char **argv)
   XBT_DEBUG("Create all Libs");
   USER_HOST_LEVEL = simgrid::s4u::Host::extension_create(nullptr);
 
+  storage_lib = xbt_lib_new();
   watched_hosts_lib = xbt_dict_new_homogeneous(nullptr);
+
+  XBT_DEBUG("Add SURF levels");
+  SURF_STORAGE_LEVEL = xbt_lib_add_level(storage_lib,surf_storage_free);
 
   xbt_init(argc, argv);
   if (not all_existing_models)
@@ -362,6 +371,7 @@ void surf_exit()
   TRACE_end();                  /* Just in case it was not called by the upper layer (or there is no upper layer) */
 
   sg_host_exit();
+  xbt_lib_free(&storage_lib);
   sg_link_exit();
   xbt_dict_free(&watched_hosts_lib);
   for (auto e : storage_types) {
@@ -373,7 +383,6 @@ void surf_exit()
     delete stype->model_properties;
     free(stype);
   }
-  delete simgrid::surf::StorageImpl::storages;
 
   for (auto model : *all_existing_models)
     delete model;

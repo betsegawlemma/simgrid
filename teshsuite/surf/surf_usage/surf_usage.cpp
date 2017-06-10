@@ -31,6 +31,7 @@ static const char *string_action(simgrid::surf::Action::State state)
 
 int main(int argc, char **argv)
 {
+  double now = -1.0;
   surf_init(&argc, argv);       /* Initialize some common structures */
   xbt_cfg_set_parse("cpu/model:Cas01");
   xbt_cfg_set_parse("network/model:CM02");
@@ -64,7 +65,8 @@ int main(int argc, char **argv)
   surf_solve(-1.0);
   do {
     simgrid::surf::ActionList *action_list = nullptr;
-    XBT_INFO("Next Event : %g", surf_get_clock());
+    now = surf_get_clock();
+    XBT_INFO("Next Event : %g", now);
     XBT_DEBUG("\t CPU actions");
 
     action_list = surf_cpu_model_pm->getFailedActionSet();

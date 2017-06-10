@@ -162,9 +162,9 @@ static void recursiveGraphExtraction(simgrid::s4u::NetZone* netzone, container_t
 /*
  * Callbacks
  */
-static void sg_instr_AS_begin(simgrid::s4u::NetZone& netzone)
+void sg_instr_AS_begin(sg_platf_AS_cbarg_t AS)
 {
-  const char* id = netzone.name();
+  const char*id = AS->id;
 
   if (PJ_container_get_root() == nullptr){
     PJ_container_alloc ();
@@ -195,7 +195,7 @@ static void sg_instr_AS_begin(simgrid::s4u::NetZone& netzone)
   }
 }
 
-static void sg_instr_AS_end(simgrid::s4u::NetZone& /*netzone*/)
+void sg_instr_AS_end()
 {
   if (TRACE_needs_platform()){
     currentContainer.pop_back();
@@ -318,15 +318,11 @@ void instr_routing_define_callbacks ()
 {
   //always need the call backs to ASes (we need only the root AS),
   //to create the rootContainer and the rootType properly
-  if (not TRACE_is_enabled())
+  if (not TRACE_is_enabled() || not TRACE_needs_platform())
     return;
-  if (TRACE_needs_platform()) {
-    simgrid::s4u::Link::onCreation.connect(instr_routing_parse_start_link);
-    simgrid::s4u::onPlatformCreated.connect(instr_routing_parse_end_platform);
-    simgrid::s4u::Host::onCreation.connect(sg_instr_new_host);
-  }
-  simgrid::s4u::NetZone::onCreation.connect(sg_instr_AS_begin);
-  simgrid::s4u::NetZone::onSeal.connect(sg_instr_AS_end);
+  simgrid::s4u::Link::onCreation.connect(instr_routing_parse_start_link);
+  simgrid::s4u::onPlatformCreated.connect(instr_routing_parse_end_platform);
+  simgrid::s4u::Host::onCreation.connect(sg_instr_new_host);
 }
 
 /*

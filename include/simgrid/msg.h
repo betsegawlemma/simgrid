@@ -7,6 +7,7 @@
 #ifndef MSG_H
 #define MSG_H
 
+#include "xbt/lib.h"
 #include "simgrid/forward.h"
 #include "simgrid/simix.h"
 
@@ -74,13 +75,29 @@ typedef struct msg_file_priv {
 typedef struct msg_file_priv* msg_file_t;
 
 /* ******************************** Storage ************************************ */
+/* TODO: PV: to comment */
+
+extern int MSG_STORAGE_LEVEL;
 
 /** @brief Storage datatype.
  *  @ingroup msg_storage_management
  *
  *  You should consider this as an opaque object.
  */
-typedef sg_storage_t msg_storage_t;
+typedef xbt_dictelm_t msg_storage_t;
+
+struct msg_storage_priv  {
+  const char* name;
+  const char* hostname;
+  sg_size_t size;
+  void* data;
+};
+typedef struct msg_storage_priv  s_msg_storage_priv_t;
+typedef struct msg_storage_priv* msg_storage_priv_t;
+
+static inline msg_storage_priv_t MSG_storage_priv(msg_storage_t storage){
+  return (msg_storage_priv_t )xbt_lib_get_level(storage, MSG_STORAGE_LEVEL);
+}
 
 /**
  * \brief @brief Communication action.

@@ -220,6 +220,7 @@ std::vector<std::string> resolveBacktrace(
       char maps_buff[512];
       long int offset = 0;
       char* p;
+      char* p2;
       int found = 0;
 
       /* let's look for the offset of this library in our addressing space */
@@ -281,7 +282,7 @@ std::vector<std::string> resolveBacktrace(
         free(p);
         snprintf(line_func,3, "??");
       } else {
-        char* p2 = strrchr(p, '(');
+        p2 = strrchr(p, '(');
         if (p2)
           *p2 = '\0';
         p2 = strrchr(p, ' ');

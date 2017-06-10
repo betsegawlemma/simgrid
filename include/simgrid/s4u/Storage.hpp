@@ -17,18 +17,17 @@
 namespace simgrid {
 namespace s4u {
 
-std::map<std::string, Storage*>* allStorages();
-
 XBT_PUBLIC_CLASS Storage
 {
   friend s4u::Engine;
-  friend simgrid::surf::StorageImpl;
+
+  Storage(std::string name, smx_storage_t inferior);
 
 public:
-  explicit Storage(surf::StorageImpl * pimpl) : pimpl_(pimpl) {}
-  virtual ~Storage() = default;
+  Storage() = default;
+  virtual ~Storage();
   /** Retrieve a Storage by its name. It must exist in the platform file */
-  static Storage* byName(const char* name);
+  static Storage& byName(const char* name);
   const char* name();
   const char* host();
   sg_size_t sizeFree();
@@ -39,21 +38,22 @@ public:
   const char* property(const char* key);
   void setProperty(const char* key, char* value);
   std::map<std::string, sg_size_t*>* content();
+  std::unordered_map<std::string, Storage*>* allStorages();
+
+protected:
+  smx_storage_t inferior();
 
 public:
   void setUserdata(void* data) { userdata_ = data; }
   void* userdata() { return userdata_; }
 
-  /* The signals */
-  /** @brief Callback signal fired when a new Link is created */
-  static simgrid::xbt::signal<void(s4u::Storage&)> onCreation;
-
-  /** @brief Callback signal fired when a Link is destroyed */
-  static simgrid::xbt::signal<void(s4u::Storage&)> onDestruction;
-
 private:
+  static std::unordered_map<std::string, Storage*>* storages_;
+
+  std::string hostname_;
   std::string name_;
-  surf::StorageImpl* const pimpl_ = nullptr;
+  sg_size_t size_      = 0;
+  smx_storage_t pimpl_ = nullptr;
   void* userdata_      = nullptr;
 };
 

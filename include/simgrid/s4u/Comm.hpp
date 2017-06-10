@@ -11,6 +11,7 @@
 #include <simgrid/forward.h>
 #include <simgrid/s4u/Activity.hpp>
 #include <simgrid/s4u/forward.hpp>
+
 namespace simgrid {
 namespace s4u {
 /** @brief Communication async
