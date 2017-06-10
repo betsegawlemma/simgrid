@@ -254,7 +254,7 @@ void LinkEnergy::computeALinkAveragePower() {
 	}
 	double previous_power = this->a_link_average_power[this->link->name()];
 	double current_power = idle + dynamic_power;
-	double average_power = (previous_power+ current_power) / 2;
+	double average_power = (previous_power + current_power) / 2;
 	this->a_link_average_power[this->link->name()] = average_power;
 
 	XBT_DEBUG(
@@ -394,7 +394,7 @@ static void computAndDisplayTotalEnergy() {
 	double t = surf_get_clock();
 	total_energy = total_power * t;
 
-	XBT_INFO("TotalPower %f TotalEnergy %f ComputedTransferTime %f", total_power, total_energy, t);
+	XBT_INFO("SgTotalPower %f SgTotalEnergy %f SgTransferTime %f", total_power, total_energy, t);
 	xbt_free(link_list);
 }
 
