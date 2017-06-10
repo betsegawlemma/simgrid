@@ -264,7 +264,6 @@ set(XBT_SRC
   src/xbt/exception.cpp
   src/xbt/graph.c
   src/xbt/heap.c
-  src/xbt/lib.c
   src/xbt/log.c
   src/xbt/mallocator.c
   src/xbt/memory_map.cpp
@@ -695,7 +694,6 @@ set(headers_to_install
   include/smpi/smpi_extended_traces.h
   include/smpi/smpi_extended_traces_fortran.h
   include/smpi/forward.hpp
-  include/surf/surf_routing.h
   include/xbt.h
   include/xbt/RngStream.h
   include/xbt/asserts.h
@@ -721,7 +719,6 @@ set(headers_to_install
   include/xbt/future.hpp
   include/xbt/graph.h
   include/xbt/heap.h
-  include/xbt/lib.h
   include/xbt/Extendable.hpp
   include/xbt/log.h
   include/xbt/log.hpp
