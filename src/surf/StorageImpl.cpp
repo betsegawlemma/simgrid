@@ -14,9 +14,6 @@
 
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(surf_storage, surf, "Logging specific to the SURF storage module");
 
-xbt_lib_t storage_lib;
-int MSG_STORAGE_LEVEL                           = -1; // Msg storage level
-int SURF_STORAGE_LEVEL                          = -1;
 simgrid::surf::StorageModel* surf_storage_model = nullptr;
 
 namespace simgrid {
@@ -30,6 +27,17 @@ simgrid::xbt::signal<void(StorageImpl*)> storageCreatedCallbacks;
 simgrid::xbt::signal<void(StorageImpl*)> storageDestructedCallbacks;
 simgrid::xbt::signal<void(StorageImpl*, int, int)> storageStateChangedCallbacks; // signature: wasOn, isOn
 simgrid::xbt::signal<void(StorageAction*, Action::State, Action::State)> storageActionStateChangedCallbacks;
+
+/* List of storages */
+std::unordered_map<std::string, StorageImpl*>* StorageImpl::storages =
+    new std::unordered_map<std::string, StorageImpl*>();
+
+StorageImpl* StorageImpl::byName(const char* name)
+{
+  if (storages->find(name) == storages->end())
+    return nullptr;
+  return storages->at(name);
+}
 
 /*********
  * Model *
@@ -53,6 +61,7 @@ StorageModel::~StorageModel()
 StorageImpl::StorageImpl(Model* model, const char* name, lmm_system_t maxminSystem, double bread, double bwrite,
                          const char* type_id, const char* content_name, sg_size_t size, const char* attach)
     : Resource(model, name, lmm_constraint_new(maxminSystem, this, MAX(bread, bwrite)))
+    , piface_(this)
     , size_(size)
     , usedSize_(0)
     , typeId_(xbt_strdup(type_id))
@@ -64,6 +73,7 @@ StorageImpl::StorageImpl(Model* model, const char* name, lmm_system_t maxminSyst
   XBT_DEBUG("Create resource with Bread '%f' Bwrite '%f' and Size '%llu'", bread, bwrite, size);
   constraintRead_  = lmm_constraint_new(maxminSystem, this, bread);
   constraintWrite_ = lmm_constraint_new(maxminSystem, this, bwrite);
+  storages->insert({name, this});
 }
 
 StorageImpl::~StorageImpl()
