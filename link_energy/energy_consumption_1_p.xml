@@ -2,17 +2,17 @@
 <!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
 <platform version="4.1">
 	<AS id="AS0" routing="Full">
-		<host id="H-0" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+		<host id="SRC" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
 			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
 			<prop id="watt_off" value="0" />
 		</host>
-		<host id="H-2" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+		<host id="DST" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
 			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
 		</host>
 		<link id="L1" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
-		<route src="H-0" dst="H-2">
+		<route src="SRC" dst="DST">
 			<link_ctn id="L1" />
 		</route>
 	</AS>
