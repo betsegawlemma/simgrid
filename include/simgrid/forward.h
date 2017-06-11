@@ -38,11 +38,6 @@ class ActivityImpl;
   }
 }
 
-typedef simgrid::s4u::NetZone simgrid_NetZone;
-typedef simgrid::s4u::Host simgrid_Host;
-typedef simgrid::s4u::Link simgrid_Link;
-typedef simgrid::s4u::Link Link;
-
 typedef simgrid::s4u::Actor s4u_Actor;
 typedef simgrid::s4u::Host s4u_Host;
 typedef simgrid::s4u::Link s4u_Link;
@@ -65,10 +60,6 @@ typedef struct surf_Resource surf_Resource;
 typedef struct Trace tmgr_Trace;
 
 #endif
-
-//typedef simgrid_NetZone* NetZone_t;
-//typedef simgrid_Host* sg_host_t;
-//typedef Link* sg_link_t;
 
 typedef s4u_NetZone* sg_netzone_t;
 typedef s4u_Host* sg_host_t;
