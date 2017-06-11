@@ -43,7 +43,6 @@ set(EXTRA_DIST
   src/surf/network_constant.hpp
   src/surf/network_interface.hpp
   src/surf/network_ns3.hpp
-  src/surf/network_ecofen.hpp
   src/surf/network_smpi.hpp
   src/surf/network_ib.hpp
   src/surf/ns3/ns3_interface.h
@@ -694,7 +693,6 @@ set(headers_to_install
   include/smpi/smpi_extended_traces.h
   include/smpi/smpi_extended_traces_fortran.h
   include/smpi/forward.hpp
-  include/surf/surf_routing.h
   include/xbt.h
   include/xbt/RngStream.h
   include/xbt/asserts.h

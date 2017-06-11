@@ -40,7 +40,8 @@ simgrid::xbt::signal<void()> surfExitCallbacks;
 #include <simgrid/plugins/load.h>   // FIXME: this plugin should not be linked to the core
 
 s_surf_model_description_t surf_plugin_description[] = {
-    {"Energy", "Cpu energy consumption.", &sg_host_energy_plugin_init},
+    {"HostEnergy", "Cpu energy consumption.", &sg_host_energy_plugin_init},
+    {"LinkEnergy", "Cpu energy consumption.", &sg_link_energy_plugin_init},
     {"Load", "Cpu load.", &sg_host_load_plugin_init},
     {nullptr, nullptr, nullptr} /* this array must be nullptr terminated */
 };
