@@ -1,49 +1,160 @@
 #! ./tesh
 
-p Testing the mechanism for computing link energy consumption
+p Testing the mechanism for computing link energy consumption (using CM02 as a network model)
 
-$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n"
+$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --cfg=network/model:CM02
 > [0.000000] [s4u_app_energyconsumption/INFO] Activating the SimGrid link energy plugin
+> [  0.000000] (0:maestro@) Configuration change: Set 'network/model' to 'CM02'
 > [  0.000000] (0:sender@SRC) Send '1000' bytes
 > [  0.000000] (0:receiver@DST) Receiving ...
-> [  0.390387] (0:sender@SRC) sender done 0.390387
-> [  0.390387] (0:receiver@DST) receiver done 0.390387
-> [  0.390387] (0:maestro@) L3 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 29.235185
-> [  0.390387] (0:maestro@) L2 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 29.235185
-> [  0.390387] (0:maestro@) L1 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 29.235185
-> [  0.390387] (0:maestro@) SgTotalPower 63.850077 SgTotalEnergy 24.926214 SgTransferTime 0.390387
+> [  0.030084] (0:sender@SRC) sender done 0.030084
+> [  0.030084] (0:receiver@DST) receiver done 0.030084
+> [  0.030084] (0:maestro@) L3 Usage 12500000.000000 Bandwidth 12500000.000000 Power 21.300900 Energy 15.096110
+> [  0.030084] (0:maestro@) L2 Usage 12500000.000000 Bandwidth 12500000.000000 Power 21.300900 Energy 15.096110
+> [  0.030084] (0:maestro@) L1 Usage 12500000.000000 Bandwidth 12500000.000000 Power 21.300900 Energy 15.096110
+> [  0.030084] (0:maestro@) SgTotalPower 63.902700 SgTotalEnergy 1.922449 SgTransferTime 0.030084
 
-p And now test with 1000000 bytes
+p And now test with 500000 bytes
 
-$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  1000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n"
+$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  50000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --cfg=network/model:CM02
 > [0.000000] [s4u_app_energyconsumption/INFO] Activating the SimGrid link energy plugin
-> [  0.000000] (0:sender@SRC) Send '1000000' bytes
+> [  0.000000] (0:maestro@) Configuration change: Set 'network/model' to 'CM02'
+> [  0.000000] (0:sender@SRC) Send '50000000' bytes
 > [  0.000000] (0:receiver@DST) Receiving ...
-> [  0.476898] (0:sender@SRC) sender done 0.476898
-> [  0.476898] (0:receiver@DST) receiver done 0.476898
-> [  0.476898] (0:maestro@) L3 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 32.641865
-> [  0.476898] (0:maestro@) L2 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 32.641865
-> [  0.476898] (0:maestro@) L1 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 32.641865
-> [  0.476898] (0:maestro@) SgTotalPower 63.850077 SgTotalEnergy 30.449970 SgTransferTime 0.476898
+> [  4.230000] (0:sender@SRC) sender done 4.230000
+> [  4.230000] (0:receiver@DST) receiver done 4.230000
+> [  4.230000] (0:maestro@) L3 Usage 12500000.000000 Bandwidth 12500000.000000 Power 21.300900 Energy 185.737701
+> [  4.230000] (0:maestro@) L2 Usage 12500000.000000 Bandwidth 12500000.000000 Power 21.300900 Energy 185.737701
+> [  4.230000] (0:maestro@) L1 Usage 12500000.000000 Bandwidth 12500000.000000 Power 21.300900 Energy 185.737701
+> [  4.230000] (0:maestro@) SgTotalPower 63.902700 SgTotalEnergy 270.308421 SgTransferTime 4.230000
 
 
+p And finally, using NS3+ecofen instead of the internal models (still for 50000000 bytes)
 
-p And finally, using NS3+ecofen instead of the internal models (still for 1000000 bytes)
-
-$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  1000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --NS3 --cfg=network/model:NS3
+$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  50000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --NS3 --cfg=network/model:NS3
 > [0.000000] [s4u_app_energyconsumption/INFO] Activating the Ecofen energy plugin
 > [  0.000000] (0:maestro@) Configuration change: Set 'network/model' to 'NS3'
 > [  0.000000] (0:maestro@) Configuration change: Set 'network/model' to 'NS3'
 > [  0.000000] (0:maestro@) Ignoring a route between SRC and DST of length 3: Only routes of length 1 are considered with NS3.
 > WARNING: You can ignore this warning if your hosts can still communicate when only considering routes of length 1.
 > WARNING: Remove long routes to avoid this harmless message; subsequent long routes will be silently ignored.
-> [  0.000000] (0:sender@SRC) Send '1000000' bytes
+> [  0.000000] (0:sender@SRC) Send '50000000' bytes
 > [  0.000000] (0:receiver@DST) Receiving ...
-> Time 0 Node 0 Conso 0
-> Time 0 Node 1 Conso 10.3581
-> Time 0 Node 2 Conso 10.3581
-> Time 0 Node 3 Conso 20.7162
-> Time 0 Node 4 Conso 20.7162
-> [  0.910790] (0:sender@SRC) sender done 0.910790
-> [  0.910790] (0:receiver@DST) receiver done 0.910790
+> Time 1 Node 0 Conso 0
+> Time 1 Node 1 Conso 10.363
+> Time 1 Node 2 Conso 10.3628
+> Time 1 Node 3 Conso 20.7261
+> Time 1 Node 4 Conso 20.7261
+> Time 2 Node 0 Conso 0
+> Time 2 Node 1 Conso 10.3665
+> Time 2 Node 2 Conso 10.3663
+> Time 2 Node 3 Conso 20.7322
+> Time 2 Node 4 Conso 20.7321
+> Time 3 Node 0 Conso 0
+> Time 3 Node 1 Conso 10.366
+> Time 3 Node 2 Conso 10.3665
+> Time 3 Node 3 Conso 20.7329
+> Time 3 Node 4 Conso 20.733
+> Time 4 Node 0 Conso 0
+> Time 4 Node 1 Conso 10.3665
+> Time 4 Node 2 Conso 10.366
+> Time 4 Node 3 Conso 20.7331
+> Time 4 Node 4 Conso 20.7323
+> Time 5 Node 0 Conso 0
+> Time 5 Node 1 Conso 10.366
+> Time 5 Node 2 Conso 10.3665
+> Time 5 Node 3 Conso 20.7321
+> Time 5 Node 4 Conso 20.7329
+> Time 6 Node 0 Conso 0
+> Time 6 Node 1 Conso 10.3665
+> Time 6 Node 2 Conso 10.3662
+> Time 6 Node 3 Conso 20.733
+> Time 6 Node 4 Conso 20.733
+> Time 7 Node 0 Conso 0
+> Time 7 Node 1 Conso 10.3664
+> Time 7 Node 2 Conso 10.3664
+> Time 7 Node 3 Conso 20.7321
+> Time 7 Node 4 Conso 20.7321
+> Time 8 Node 0 Conso 0
+> Time 8 Node 1 Conso 10.3661
+> Time 8 Node 2 Conso 10.3665
+> Time 8 Node 3 Conso 20.733
+> Time 8 Node 4 Conso 20.733
+> Time 9 Node 0 Conso 0
+> Time 9 Node 1 Conso 10.3665
+> Time 9 Node 2 Conso 10.366
+> Time 9 Node 3 Conso 20.7329
+> Time 9 Node 4 Conso 20.7321
+> Time 10 Node 0 Conso 0
+> Time 10 Node 1 Conso 10.366
+> Time 10 Node 2 Conso 10.3665
+> Time 10 Node 3 Conso 20.7322
+> Time 10 Node 4 Conso 20.7331
+> Time 11 Node 0 Conso 0
+> Time 11 Node 1 Conso 10.3665
+> Time 11 Node 2 Conso 10.3661
+> Time 11 Node 3 Conso 20.733
+> Time 11 Node 4 Conso 20.733
+> Time 12 Node 0 Conso 0
+> Time 12 Node 1 Conso 10.3663
+> Time 12 Node 2 Conso 10.3665
+> Time 12 Node 3 Conso 20.7321
+> Time 12 Node 4 Conso 20.7322
+> Time 13 Node 0 Conso 0
+> Time 13 Node 1 Conso 10.3663
+> Time 13 Node 2 Conso 10.3665
+> Time 13 Node 3 Conso 20.733
+> Time 13 Node 4 Conso 20.733
+> Time 14 Node 0 Conso 0
+> Time 14 Node 1 Conso 10.3665
+> Time 14 Node 2 Conso 10.366
+> Time 14 Node 3 Conso 20.7327
+> Time 14 Node 4 Conso 20.7321
+> Time 15 Node 0 Conso 0
+> Time 15 Node 1 Conso 10.366
+> Time 15 Node 2 Conso 10.3665
+> Time 15 Node 3 Conso 20.7324
+> Time 15 Node 4 Conso 20.7331
+> Time 16 Node 0 Conso 0
+> Time 16 Node 1 Conso 10.3665
+> Time 16 Node 2 Conso 10.366
+> Time 16 Node 3 Conso 20.7331
+> Time 16 Node 4 Conso 20.7328
+> Time 17 Node 0 Conso 0
+> Time 17 Node 1 Conso 10.3662
+> Time 17 Node 2 Conso 10.3665
+> Time 17 Node 3 Conso 20.7321
+> Time 17 Node 4 Conso 20.7324
+> Time 18 Node 0 Conso 0
+> Time 18 Node 1 Conso 10.3664
+> Time 18 Node 2 Conso 10.3664
+> Time 18 Node 3 Conso 20.733
+> Time 18 Node 4 Conso 20.733
+> Time 19 Node 0 Conso 0
+> Time 19 Node 1 Conso 10.3665
+> Time 19 Node 2 Conso 10.3661
+> Time 19 Node 3 Conso 20.7325
+> Time 19 Node 4 Conso 20.7321
+> Time 20 Node 0 Conso 0
+> Time 20 Node 1 Conso 10.366
+> Time 20 Node 2 Conso 10.3665
+> Time 20 Node 3 Conso 20.7326
+> Time 20 Node 4 Conso 20.7331
+> Time 21 Node 0 Conso 0
+> Time 21 Node 1 Conso 10.3665
+> Time 21 Node 2 Conso 10.366
+> Time 21 Node 3 Conso 20.7331
+> Time 21 Node 4 Conso 20.7326
+> Time 22 Node 0 Conso 0
+> Time 22 Node 1 Conso 10.3661
+> Time 22 Node 2 Conso 10.3665
+> Time 22 Node 3 Conso 20.7321
+> Time 22 Node 4 Conso 20.7326
+> Time 23 Node 0 Conso 0
+> Time 23 Node 1 Conso 10.3665
+> Time 23 Node 2 Conso 10.3663
+> Time 23 Node 3 Conso 20.733
+> Time 23 Node 4 Conso 20.733
+> [ 23.450636] (0:sender@SRC) sender done 23.450636
+> [ 23.450636] (0:receiver@DST) receiver done 23.450636
 
