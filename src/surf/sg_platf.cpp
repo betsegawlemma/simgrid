@@ -4,6 +4,7 @@
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "simgrid/s4u/Engine.hpp"
+#include "simgrid/s4u/Storage.hpp"
 
 #include "src/kernel/EngineImpl.hpp"
 #include "src/simix/smx_private.h"
@@ -424,8 +425,7 @@ void sg_platf_new_mount(sg_platf_mount_cbarg_t mount){
 
   if (mount_list.empty())
     XBT_DEBUG("Create a Mount list for %s", A_surfxml_host_id);
-  mount_list.insert(
-      {std::string(mount->name), surf_storage_resource_priv(surf_storage_resource_by_name(mount->storageId))});
+  mount_list.insert({std::string(mount->name), simgrid::surf::StorageImpl::byName(mount->storageId)});
 }
 
 void sg_platf_new_route(sg_platf_route_cbarg_t route)
@@ -662,8 +662,7 @@ simgrid::s4u::NetZone* sg_platf_new_AS_begin(sg_platf_AS_cbarg_t AS)
   /* set the new current component of the tree */
   current_routing = new_as;
 
-  if (TRACE_is_enabled())
-    sg_instr_AS_begin(AS);
+  simgrid::s4u::NetZone::onCreation(*new_as); // notify the signal
 
   return new_as;
 }
@@ -678,10 +677,8 @@ void sg_platf_new_AS_seal()
 {
   xbt_assert(current_routing, "Cannot seal the current AS: none under construction");
   current_routing->seal();
-  current_routing = static_cast<simgrid::kernel::routing::NetZoneImpl*>(current_routing->father());
-
-  if (TRACE_is_enabled())
-    sg_instr_AS_end();
+  simgrid::s4u::NetZone::onSeal(*current_routing);
+  current_routing = static_cast<simgrid::kernel::routing::NetZoneImpl*>(current_routing->father()); 
 }
 
 /** @brief Add a link connecting an host to the rest of its AS (which must be cluster or vivaldi) */

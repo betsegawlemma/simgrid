@@ -20,6 +20,8 @@ simgrid::xbt::signal<void(bool symmetrical, kernel::routing::NetPoint* src, kern
                           kernel::routing::NetPoint* gw_src, kernel::routing::NetPoint* gw_dst,
                           std::vector<surf::LinkImpl*>* link_list)>
     NetZone::onRouteCreation;
+simgrid::xbt::signal<void(NetZone&)> NetZone::onCreation;
+simgrid::xbt::signal<void(NetZone&)> NetZone::onSeal;
 
 NetZone::NetZone(NetZone* father, const char* name) : father_(father), name_(xbt_strdup(name))
 {

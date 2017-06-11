@@ -845,6 +845,11 @@ void ResetStateEvent::print() {
   }
 }
 
+StartLinkEvent::~StartLinkEvent()
+{
+  free(value);
+  free(key);
+}
 StartLinkEvent::StartLinkEvent (double timestamp, container_t container,
     type_t type, container_t sourceContainer, const char *value, const char *key)
   : StartLinkEvent(timestamp, container, type, sourceContainer, value, key, -1)
@@ -904,7 +909,11 @@ EndLinkEvent::EndLinkEvent (double timestamp, container_t container, type_t type
   insert_into_buffer (this);
 }
 
-
+EndLinkEvent::~EndLinkEvent()
+{
+  free(value);
+  free(key);
+}
 void EndLinkEvent::print() {
   if (instr_fmt_type == instr_fmt_paje) {
     XBT_DEBUG("%s: event_type=%d, timestamp=%.*f", __FUNCTION__, (int)event_type, TRACE_precision(), timestamp);
