@@ -6,39 +6,33 @@
 #ifndef S4U_LINK_HPP_
 #define S4U_LINK_HPP_
 
-#include <xbt/base.h>
-#include <unordered_map>
-#include "xbt/dict.h"
-#include "xbt/Extendable.hpp"
-#include "xbt/signal.hpp"
 #include "simgrid/link.h"
+#include "xbt/base.h"
+#include "xbt/signal.hpp"
+#include "xbt/Extendable.hpp"
+
+#include <unordered_map>
 
 /***********
  * Classes *
  ***********/
 
 namespace simgrid {
-namespace surf{
- class NetworkAction;
-};
-namespace xbt {
-  extern template class XBT_PUBLIC() Extendable<simgrid::s4u::Link>;
+namespace surf {
+class NetworkAction;
 };
 namespace s4u {
 /** @brief A Link represents the network facilities between [hosts](\ref simgrid::s4u::Host) */
-
-XBT_PUBLIC_CLASS Link : public simgrid::xbt::Extendable<Link>  {
-
+XBT_PUBLIC_CLASS Link :  public simgrid::xbt::Extendable<Link>
+{
   friend simgrid::surf::LinkImpl;
 
   // Links are created from the NetZone, and destroyed by their private implementation when the simulation ends
   explicit Link(surf::LinkImpl* pimpl) : pimpl_(pimpl) {}
   virtual ~Link() = default;
-  // The private implementation, that never changes
-  //surf::LinkImpl* const pimpl_;
 
 public:
-
+  // The private implementation, that never changes. FIXME: make me private again
   surf::LinkImpl* const pimpl_;
 
   /** @brief Retrieve a link from its name */
@@ -62,16 +56,14 @@ public:
 
   void turnOn();
   void turnOff();
-
-  xbt_dict_t properties();
-  const char*property(const char*key);
-  void setProperty(const char*key, const char *value);
-
   /** Returns if that link is currently up and running */
   bool isOn();
   /** Returns if that link is currently down and offline */
   bool isOff() { return !isOn(); }
 
+  const char*property(const char*key);
+  void setProperty(const char*key, const char *value);   
+   
   void* getData();
   void setData(void* d);
 
@@ -83,9 +75,8 @@ public:
                                                external load). Trace must contain absolute values */
 
   sg_link_t* listLink();
-
   int linkCount();
-
+   
   /* The signals */
   /** @brief Callback signal fired when a new Link is created */
   static simgrid::xbt::signal<void(s4u::Link&)> onCreation;
