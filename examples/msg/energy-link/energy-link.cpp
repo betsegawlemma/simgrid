@@ -63,6 +63,9 @@ int main(int argc, char* argv[]) {
 
   /* Now initialize the S4U engine, and load the platform */
   simgrid::s4u::Engine* e = new simgrid::s4u::Engine(&argc, argv);
+  if (NS3)
+     xbt_cfg_set_parse("network/model:NS3");
+   
   xbt_assert(argc > 1, "\nUsage: %s platform_file [datasize] [--NS3]\n"
       "\tExample: %s s4uplatform.xml \n"
       "\tIf you add NS3 as last parameter, this module will try to activate the ecofen plugin.\n"

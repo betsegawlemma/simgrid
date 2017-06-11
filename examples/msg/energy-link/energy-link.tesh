@@ -30,9 +30,20 @@ $ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_co
 
 p And finally, using NS3+ecofen instead of the internal models (still for 1000000 bytes)
 
-$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  1000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --NS3
+$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  1000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --NS3 --cfg=network/model:NS3
 > [0.000000] [s4u_app_energyconsumption/INFO] Activating the Ecofen energy plugin
+> [  0.000000] (0:maestro@) Configuration change: Set 'network/model' to 'NS3'
+> [  0.000000] (0:maestro@) Configuration change: Set 'network/model' to 'NS3'
+> [  0.000000] (0:maestro@) Ignoring a route between SRC and DST of length 3: Only routes of length 1 are considered with NS3.
+> WARNING: You can ignore this warning if your hosts can still communicate when only considering routes of length 1.
+> WARNING: Remove long routes to avoid this harmless message; subsequent long routes will be silently ignored.
 > [  0.000000] (0:sender@SRC) Send '1000000' bytes
 > [  0.000000] (0:receiver@DST) Receiving ...
-> [  0.476898] (0:sender@SRC) sender done 0.476898
-> [  0.476898] (0:receiver@DST) receiver done 0.476898
+> Time 0 Node 0 Conso 0
+> Time 0 Node 1 Conso 10.3581
+> Time 0 Node 2 Conso 10.3581
+> Time 0 Node 3 Conso 20.7162
+> Time 0 Node 4 Conso 20.7162
+> [  0.910790] (0:sender@SRC) sender done 0.910790
+> [  0.910790] (0:receiver@DST) receiver done 0.910790
+
