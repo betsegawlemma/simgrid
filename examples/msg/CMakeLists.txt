@@ -16,7 +16,7 @@ foreach(x actions-comm actions-storage app-masterworker app-pingpong app-token-r
 endforeach()
 
 # CPP examples
-foreach(x maestro-set)
+foreach(x energy-link maestro-set)
   add_executable       (${x}     ${x}/${x}.cpp)
   target_link_libraries(${x}     simgrid)
   set_target_properties(${x}  PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${x})
@@ -103,7 +103,7 @@ foreach(x actions-comm actions-storage app-bittorrent app-chainsend app-masterwo
   ADD_TESH_FACTORIES(msg-${x} "thread;ucontext;raw;boost" --setenv bindir=${CMAKE_BINARY_DIR}/examples/msg/${x} --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/platforms --cd ${CMAKE_HOME_DIRECTORY}/examples/msg/${x} ${x}.tesh)
 endforeach()
 
-foreach (example consumption onoff pstate vm)
+foreach (example consumption link onoff pstate vm)
   ADD_TESH_FACTORIES(msg-energy-${example} "thread;ucontext;raw;boost" --setenv bindir=${CMAKE_BINARY_DIR}/examples/msg --setenv srcdir=${CMAKE_HOME_DIRECTORY}/examples/msg --cd ${CMAKE_BINARY_DIR}/examples/msg ${CMAKE_HOME_DIRECTORY}/examples/msg/energy-${example}/energy-${example}.tesh)
 endforeach()
 
