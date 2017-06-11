@@ -3,3 +3,36 @@
 p Testing the mechanism for computing link energy consumption
 
 $ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n"
+> [0.000000] [s4u_app_energyconsumption/INFO] Activating the SimGrid link energy plugin
+> [  0.000000] (0:sender@SRC) Send '1000' bytes
+> [  0.000000] (0:receiver@DST) Receiving ...
+> [  0.390387] (0:sender@SRC) sender done 0.390387
+> [  0.390387] (0:receiver@DST) receiver done 0.390387
+> [  0.390387] (0:maestro@) L3 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 29.235185
+> [  0.390387] (0:maestro@) L2 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 29.235185
+> [  0.390387] (0:maestro@) L1 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 29.235185
+> [  0.390387] (0:maestro@) SgTotalPower 63.850077 SgTotalEnergy 24.926214 SgTransferTime 0.390387
+
+p And now test with 1000000 bytes
+
+$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  1000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n"
+> [0.000000] [s4u_app_energyconsumption/INFO] Activating the SimGrid link energy plugin
+> [  0.000000] (0:sender@SRC) Send '1000000' bytes
+> [  0.000000] (0:receiver@DST) Receiving ...
+> [  0.476898] (0:sender@SRC) sender done 0.476898
+> [  0.476898] (0:receiver@DST) receiver done 0.476898
+> [  0.476898] (0:maestro@) L3 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 32.641865
+> [  0.476898] (0:maestro@) L2 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 32.641865
+> [  0.476898] (0:maestro@) L1 Usage 12125000.000000 Bandwidth 12500000.000000 Power 21.283359 Energy 32.641865
+> [  0.476898] (0:maestro@) SgTotalPower 63.850077 SgTotalEnergy 30.449970 SgTransferTime 0.476898
+
+
+
+p And finally, using NS3+ecofen instead of the internal models (still for 1000000 bytes)
+
+$ ${bindir:=.}/energy-link/energy-link$EXEEXT ${srcdir:=.}/energy-link/energy_consumption_p.xml  1000000 "--log=root.fmt:[%10.6r]%e(%i:%P@%h)%e%m%n" --NS3
+> [0.000000] [s4u_app_energyconsumption/INFO] Activating the Ecofen energy plugin
+> [  0.000000] (0:sender@SRC) Send '1000000' bytes
+> [  0.000000] (0:receiver@DST) Receiving ...
+> [  0.476898] (0:sender@SRC) sender done 0.476898
+> [  0.476898] (0:receiver@DST) receiver done 0.476898
