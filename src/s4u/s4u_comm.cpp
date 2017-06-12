@@ -159,6 +159,7 @@ void Comm::send_detached(MailboxPtr dest, void* data, int simulatedSize)
 
 s4u::CommPtr Comm::send_async(MailboxPtr dest, void* data, int simulatedSize)
 {
+  xbt_assert(data != nullptr, "You cannot send null");
   s4u::CommPtr res = CommPtr(s4u::Comm::send_init(dest));
   res->setRemains(simulatedSize);
   res->srcBuff_     = data;
