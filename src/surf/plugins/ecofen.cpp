@@ -189,7 +189,7 @@ void init_ecofen(double netDeviceIdleValue) {
 
 	double byteEnergy = 3.423; //byte energy in nJoule
 	ecofen_init_basic_model(0.0, byteEnergy); // node idle power and byte energy value in nJoule
-	ecofen_init_log(1.0, 250.0); //log time interval and log end time
+	ecofen_init_log(0.05, 1000.0); //log time interval and log end time
 	ecofen_init_linear_model(netDeviceIdleValue); //idle power for the net device
 }
 

@@ -186,7 +186,7 @@ NetworkNS3Model::NetworkNS3Model() :
   simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
 
 
-  LogComponentEnable("PacketSink", ns3::LOG_LEVEL_INFO);
+  //LogComponentEnable("PacketSink", ns3::LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoClientApplication", ns3::LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoServerApplication", ns3::LOG_LEVEL_INFO);
 }
