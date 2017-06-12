@@ -81,9 +81,6 @@ NetPointNs3::NetPointNs3() {
 
 static void clusterCreation_cb(sg_platf_cluster_cbarg_t cluster)
 {
-  char* lat = bprintf("%fs", cluster->lat);
-  char* bw  = bprintf("%fbps", cluster->bw * 8);
-
   for (int i : *cluster->radicals) {
     // Routers don't create a router on the other end of the private link by themselves.
     // We just need this router to be given an ID so we create a temporary NetPointNS3 so that it gets one
@@ -95,20 +92,14 @@ static void clusterCreation_cb(sg_platf_cluster_cbarg_t cluster)
     xbt_assert(host_src, "Cannot find a NS3 host of name %s", host_id);
 
     // Any NS3 route is symmetrical
-    ns3_add_link(host_src, host_dst, bw, lat);
+    ns3_add_link(host_src, host_dst, cluster->bw, cluster->lat);
 
     delete host_dst;
     free(host_id);
   }
-  xbt_free(lat);
-  xbt_free(bw);
 
   //Create link backbone
-  lat = bprintf("%fs", cluster->bb_lat);
-  bw =  bprintf("%fBps", cluster->bb_bw);
-  ns3_add_cluster(cluster->id, bw, lat);
-  xbt_free(lat);
-  xbt_free(bw);
+  ns3_add_cluster(cluster->id, cluster->bb_bw, cluster->bb_lat);
 }
 
 static void routeCreation_cb(bool symmetrical, simgrid::kernel::routing::NetPoint* src,
@@ -121,12 +112,10 @@ static void routeCreation_cb(bool symmetrical, simgrid::kernel::routing::NetPoin
 
     XBT_DEBUG("Route from '%s' to '%s' with link '%s' %s", src->cname(), dst->cname(), link->cname(),
               (symmetrical ? "(symmetrical)" : "(not symmetrical)"));
-    char* link_bdw = bprintf("%fbps", link->bandwidth() * 8);
-    char* link_lat = bprintf("%fs", link->latency());
 
     //   XBT_DEBUG("src (%s), dst (%s), src_id = %d, dst_id = %d",src,dst, src_id, dst_id);
-    XBT_DEBUG("\tLink (%s) bdw:%s lat:%s", link->cname(), link_bdw,
-        link_lat);
+    XBT_DEBUG("\tLink (%s) bw:%fbps lat:%fs", link->cname(), link->bandwidth(),
+        link->latency());
 
     // create link ns3
     NetPointNs3* host_src = src->extension<NetPointNs3>();
@@ -139,12 +128,7 @@ static void routeCreation_cb(bool symmetrical, simgrid::kernel::routing::NetPoin
         "Network element %s does not seem to be NS3-ready",
         dst->cname());
 
-    ns3_add_link(host_src, host_dst, link_bdw, link_lat);
-    /*if (symmetrical)
-      ns3_add_link(host_dst, host_src, link_bdw, link_lat);*/
-
-    xbt_free(link_bdw);
-    xbt_free(link_lat);
+    ns3_add_link(host_src, host_dst, link->bandwidth(), link->latency());
   } else {
     static bool warned_about_long_routes = false;
 
@@ -180,7 +164,7 @@ void surf_network_model_init_NS3() {
 }
 
 static simgrid::config::Flag<std::string> ns3_tcp_model("ns3/TcpModel",
-    "The ns3 tcp model can be : NewReno or Reno or Tahoe", "default");
+    "The ns3 tcp model can be : NewReno or Reno or Tahoe", "NewReno");
 
 namespace simgrid {
 namespace surf {
@@ -202,6 +186,7 @@ NetworkNS3Model::NetworkNS3Model() :
   simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
 
 
+  LogComponentEnable("PacketSink", ns3::LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoClientApplication", ns3::LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoServerApplication", ns3::LOG_LEVEL_INFO);
 }
@@ -340,7 +325,7 @@ NetworkNS3Action::NetworkNS3Action(Model* model, double size, s4u::Host* src,
 
   src_ = src;
   dst_ = dst;
-  ns3_create_flow(src, dst, surf_get_clock(), size, this);
+  ns3_create_flow(src, dst, size, this);
 
   s4u::Link::onCommunicate(this, src, dst);
 }
@@ -390,7 +375,7 @@ void ns3_simulator(double maxSeconds) {
 }
 
 void ns3_create_flow(simgrid::s4u::Host* src, simgrid::s4u::Host* dst,
-    double startTime, u_int32_t TotalBytes,
+    u_int32_t TotalBytes,
     simgrid::surf::NetworkNS3Action* action) {
   unsigned int node1 = src->pimpl_netpoint->extension<NetPointNs3>()->node_num;
   unsigned int node2 = dst->pimpl_netpoint->extension<NetPointNs3>()->node_num;
@@ -412,20 +397,13 @@ void ns3_create_flow(simgrid::s4u::Host* src, simgrid::s4u::Host* dst,
       ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), port_number));
   sink.Install(dst_node);
 
-  ns3::Ptr<ns3::Socket> sock = ns3::Socket::CreateSocket(src_node,
-      ns3::TcpSocketFactory::GetTypeId());
+  ns3::Ptr<ns3::Socket> sock = ns3::Socket::CreateSocket(src_node, ns3::TcpSocketFactory::GetTypeId());
 
-  xbt_dict_set(flowFromSock, transformSocketPtr(sock),
-      new SgFlow(TotalBytes, action), nullptr);
+  xbt_dict_set(flowFromSock, transformSocketPtr(sock), new SgFlow(TotalBytes, action), nullptr);
 
   sock->Bind(ns3::InetSocketAddress(port_number));
-  XBT_DEBUG("Create flow starting to %fs + %fs = %fs",
-      startTime - ns3::Simulator::Now().GetSeconds(),
-      ns3::Simulator::Now().GetSeconds(), startTime);
 
-  ns3::Simulator::Schedule(
-      ns3::Seconds(startTime - ns3::Simulator::Now().GetSeconds()),
-      &StartFlow, sock, addr, port_number);
+  ns3::Simulator::ScheduleNow(&StartFlow, sock, addr, port_number);
 
   port_number++;
   xbt_assert(port_number <= 65000,
@@ -439,10 +417,9 @@ void ns3_initialize(const char* TcpProtocol) {
 //  "ns3::TcpReno"
 //  "ns3::TcpTahoe"
 
-  ns3::Config::SetDefault("ns3::TcpSocket::SegmentSize",
-      ns3::UintegerValue(1024)); // 1024-byte packet for easier reading
-  ns3::Config::SetDefault("ns3::TcpSocket::DelAckCount",
-      ns3::UintegerValue(1));
+  ns3::Config::SetDefault ("ns3::TcpSocket::SegmentSize", ns3::UintegerValue (1000));
+  ns3::Config::SetDefault ("ns3::TcpSocket::DelAckCount", ns3::UintegerValue (1));
+  ns3::Config::SetDefault ("ns3::TcpSocketBase::Timestamp", ns3::BooleanValue (false));
 
   if (not strcmp(TcpProtocol, "default"))
     return;
@@ -469,7 +446,7 @@ void ns3_initialize(const char* TcpProtocol) {
   xbt_die("The ns3/TcpModel must be : NewReno or Reno or Tahoe");
 }
 
-void ns3_add_cluster(const char* id, char* bw, char* lat) {
+void ns3_add_cluster(const char* id, double bw, double lat) {
   ns3::NodeContainer Nodes;
 
   for (unsigned int i = number_of_clusters_nodes; i < Cluster_nodes.GetN();
@@ -485,8 +462,8 @@ void ns3_add_cluster(const char* id, char* bw, char* lat) {
   xbt_assert(Nodes.GetN() <= 65000,
       "Cluster with NS3 is limited to 65000 nodes");
   ns3::CsmaHelper csma;
-  csma.SetChannelAttribute("DataRate", ns3::StringValue(bw));
-  csma.SetChannelAttribute("Delay", ns3::StringValue(lat));
+  csma.SetDeviceAttribute("DataRate", ns3::DataRateValue(ns3::DataRate(bw*8)));// NS3 takes bps, but we provide Bps
+  csma.SetChannelAttribute("Delay", ns3::TimeValue(ns3::Seconds(lat)));
   ns3::NetDeviceContainer devices = csma.Install(Nodes);
   XBT_DEBUG("Create CSMA");
 
@@ -515,7 +492,7 @@ static char* transformIpv4Address(ns3::Ipv4Address from) {
   return bprintf("%s", s.c_str());
 }
 
-void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, char* bw, char* lat) {
+void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, double bw, double lat) {
   ns3::PointToPointHelper pointToPoint;
 
   ns3::NetDeviceContainer netA;
@@ -527,10 +504,15 @@ void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, char* bw, char* lat) {
   ns3::Ptr<ns3::Node> a = nodes.Get(srcNum);
   ns3::Ptr<ns3::Node> b = nodes.Get(dstNum);
 
-  XBT_DEBUG("\tAdd PTP from %d to %d bw:'%s' lat:'%s'", srcNum, dstNum, bw,
-      lat);
-  pointToPoint.SetDeviceAttribute("DataRate", ns3::StringValue(bw));
-  pointToPoint.SetChannelAttribute("Delay", ns3::StringValue(lat));
+  XBT_DEBUG("\tAdd PTP from %d to %d bw:'%f Bps' lat:'%fs'", srcNum, dstNum, bw, lat);
+  pointToPoint.SetDeviceAttribute("DataRate", ns3::DataRateValue(ns3::DataRate(bw*8)));// NS3 takes bps, but we provide Bps
+  pointToPoint.SetChannelAttribute("Delay", ns3::TimeValue(ns3::Seconds(lat)));
+
+  char *filename = bprintf("link-%d-%d.tr", srcNum, dstNum);
+  ns3::AsciiTraceHelper ascii;
+  pointToPoint.EnableAsciiAll (ascii.CreateFileStream (filename));
+  pointToPoint.EnablePcapAll ("tcp-bulk-send", false);
+  xbt_free(filename);
 
   netA.Add(pointToPoint.Install(a, b));
 

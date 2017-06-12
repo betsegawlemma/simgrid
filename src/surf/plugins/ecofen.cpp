@@ -181,7 +181,7 @@ SG_BEGIN_DECL()
  */
 
 void init_ns3() {
-	ns3_initialize("default");
+	ns3_initialize("NewReno");
 	ns3_simulator(10);
 }
 
