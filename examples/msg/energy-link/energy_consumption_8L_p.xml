@@ -1,0 +1,79 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd">
+<platform version="4.1">
+	<AS id="AS0" routing="Full">
+		<host id="SRC" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
+			<prop id="watt_off" value="0" />
+		</host>
+		<host id="DST" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
+		</host>
+                <router id="R1"/>
+                <router id="R2"/>
+                <router id="R3"/>
+                <router id="R4"/>
+                <router id="R5"/>
+                <router id="R6"/>
+                <router id="R7"/>
+		<link id="L1" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L2" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L3" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L4" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L5" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L6" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L7" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+    <link id="L8" bandwidth="10Mbps" latency="10ms">
+			<prop id="watt_range" value="10.3581:10.7479" />
+		</link>
+
+		<route src="SRC" dst="DST">
+			<link_ctn id="L1" />
+			<link_ctn id="L2" />
+			<link_ctn id="L3" />
+			<link_ctn id="L4" />
+			<link_ctn id="L5" />
+			<link_ctn id="L6" />
+			<link_ctn id="L7" />
+			<link_ctn id="L8" />
+		</route>
+                <route src="SRC" dst="R1">
+                       <link_ctn id="L1"/>
+                </route> 
+                <route src="R1" dst="R2">
+                       <link_ctn id="L2"/>
+                </route> 
+                <route src="R2" dst="R3">
+                       <link_ctn id="L3"/>
+                </route> 
+                <route src="R3" dst="R4">
+                       <link_ctn id="L4"/>
+                </route> 
+                <route src="R4" dst="R5">
+                       <link_ctn id="L5"/>
+                </route> 
+                <route src="R5" dst="R6">
+                       <link_ctn id="L6"/>
+                </route> 
+                <route src="R6" dst="R7">
+                       <link_ctn id="L7"/>
+                </route> 
+                <route src="R7" dst="DST">
+                       <link_ctn id="L8"/>
+                </route> 
+	</AS>
+</platform>

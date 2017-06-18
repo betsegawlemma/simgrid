@@ -61,15 +61,14 @@ public:
 	~LinkEnergy();
 
 	double getAveragePower(sg_link_t link);
-	double getTotalBytes(sg_link_t link);
-	double getLastUpdated();
-	double getCurrntTime();
+	double getALinkTotalPower(sg_link_t link);
 	void initWattsRangeList();
 	double getLinkUsage();
+	double getALinkTotalEnergy(sg_link_t link);
 	void update();
 private:
-
-	void computeALinkAveragePower();
+	double computeALinkPower();
+	void computeALinkTotalEnergy();
 
 	simgrid::s4u::Link *link { };
 //	simgrid::s4u::Link *up_link { };
@@ -78,7 +77,7 @@ private:
 	std::vector<LinkPowerRange> power_range_watts_list { };
 
 	std::map<const char*, double> a_link_average_power { };
-	std::map<const char*, double> total_bytes_per_link { };
+	std::map<const char*, double> a_link_total_energy { };
 
 	double last_updated { 0.0 }; /*< Timestamp of the last energy update event*/
 	double current_link_usage { 0.0 };
@@ -124,14 +123,7 @@ void LinkEnergy::update() {
 	this->current_link_usage = lmm_constraint_get_usage(
 			this->link->pimpl_->constraint());
 
-	double now = surf_get_clock();
-
-	this->total_bytes_per_link[this->link->name()] += this->current_link_usage
-			* (now - last_updated);
-
-	last_updated = now;
-
-	computeALinkAveragePower();
+	computeALinkTotalEnergy();
 
 	/*
 	 double uplink_usage{0.0};
@@ -200,15 +192,13 @@ void LinkEnergy::initWattsRangeList() {
 
 		double idleVal = xbt_str_parse_double(
 				(current_power_values.at(0)).c_str(), idle);
-		       idleVal *= 2; // the idle value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
+		idleVal *= 2; // the idle value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
 		double busyVal = xbt_str_parse_double(
 				(current_power_values.at(1)).c_str(), busy);
-               busyVal *= 2; // the busy value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
+		busyVal *= 2; // the busy value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
 		this->power_range_watts_list.push_back(
 				LinkPowerRange(idleVal, busyVal));
 		this->a_link_average_power[this->link->name()] = idleVal;
-
-		this->total_bytes_per_link[this->link->name()] = 0.0;
 
 		xbt_free(idle);
 		xbt_free(busy);
@@ -218,58 +208,55 @@ void LinkEnergy::initWattsRangeList() {
 
 }
 
-void LinkEnergy::computeALinkAveragePower() {
+double LinkEnergy::computeALinkPower(){
 
 	if (!strcmp(this->link->name(), "__loopback__"))
-		return;
+			return 0.0;
 
-	double dynamic_power = 0.0;
+		double dynamic_power = 0.0;
 
-	if (power_range_watts_list.empty()) {
-		return;
-	}
+		if (power_range_watts_list.empty()) {
+			return 0.0;
+		}
 
-	xbt_assert(!power_range_watts_list.empty(),
-			"No power range properties specified for link %s",
-			this->link->name());
+		xbt_assert(!power_range_watts_list.empty(),
+				"No power range properties specified for link %s",
+				this->link->name());
 
-	auto range = power_range_watts_list[0];
+		auto range = power_range_watts_list[0];
 
-	double busy = range.busy;
-	double idle = range.idle;
+		double busy = range.busy;
+		double idle = range.idle;
 
-	double power_slope = busy - idle;
+		double power_slope = busy - idle;
 
-	if (this->last_updated > 0) {
+		if (this->last_updated > 0) {
 
+			double normalized_link_usage = this->current_link_usage
+					/ this->link->bandwidth();
+			//normalized_link_usage = std::pow(normalized_link_usage,2.5);
+			dynamic_power = power_slope * normalized_link_usage;
 
+		} else {
 
-		double normalized_link_usage = this->current_link_usage / this->link->bandwidth();
-		//normalized_link_usage = std::pow(normalized_link_usage,2.5);
-		dynamic_power = power_slope * normalized_link_usage;
+			dynamic_power = 0.0;
+		}
+		double previous_power = this->a_link_average_power[this->link->name()]; //not necessary any more
+		double current_power = idle + dynamic_power;
+		double average_power = (previous_power + current_power) / 2; // not necessary any more
+		this->a_link_average_power[this->link->name()] = average_power; // not necessarry any more
 
-	} else {
-
-		dynamic_power = 0.0;
-	}
-	double previous_power = this->a_link_average_power[this->link->name()];
-	double current_power = idle + dynamic_power;
-	double average_power = (previous_power + current_power) / 2;
-	this->a_link_average_power[this->link->name()] = average_power;
-
-	XBT_DEBUG(
-			"[computeDynamicPower:%s] idle_power=%f, busy_power=%f, slope=%f, dynamic_power=%f, link_load=%f",
-			this->link->name(), idle, busy, power_slope, dynamic_power,
-			this->current_link_usage);
+		return current_power;
 
 }
 
-double LinkEnergy::getLastUpdated() {
-	return this->last_updated;
-}
+void LinkEnergy::computeALinkTotalEnergy() {
 
-double LinkEnergy::getCurrntTime() {
-	return surf_get_clock();
+	double current_power = computeALinkPower();
+	double now = surf_get_clock();
+	double a_link_total_energy = current_power * (now - last_updated);
+	this->a_link_total_energy[this->link->name()] += a_link_total_energy;
+	last_updated = now;
 }
 
 double LinkEnergy::getLinkUsage() {
@@ -281,9 +268,8 @@ double LinkEnergy::getAveragePower(sg_link_t link) {
 	return this->a_link_average_power[link->name()];
 }
 
-double LinkEnergy::getTotalBytes(sg_link_t link) {
-
-	return this->total_bytes_per_link[link->name()];
+double LinkEnergy::getALinkTotalEnergy(sg_link_t link) {
+	return this->a_link_total_energy[link->name()];
 }
 
 }
@@ -339,31 +325,6 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
 	link_energy->update();
 }
 
-double computeTransferTime(simgrid::s4u::Link* link) {
-
-	LinkEnergy *link_energy = link->extension<LinkEnergy>();
-
-	double latency = link->latency();
-
-	/*
-	 * compute actual time required to transfer this amount of bytes for a given latency (Experimentaly determined using NS-3 Simulator)
-	 *
-	 * Transfer_Time1 = 0.1525936 * Traffic +   0.6513248 (at fixed latency, bandwidth and packet_size)
-	 * Transfer_Time2 = 0.168000 * Latency (in ms) + 0.000135 (at fixed traffic, bandwidth and packet_size)
-	 *
-	 * Total_time = Transfer_Time1 + Transfer_Time2
-	 */
-
-	double totalBytes = link_energy->getTotalBytes(link);
-	double transfer_time_traffic = 0.1525936
-			* (totalBytes * 1E-6) + 0.6513248;
-	//double transfer_time_latency = 0.168000 * (latency * 1E-3) + 0.000135;
-
-	double link_total_time = transfer_time_traffic;
-
-	return link_total_time;
-}
-
 static void computAndDisplayTotalEnergy() {
 	simgrid::s4u::Link* link = nullptr;
 	sg_link_t* link_list = link->listLink();
@@ -373,33 +334,32 @@ static void computAndDisplayTotalEnergy() {
 	double total_time = 0.0;
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
-			double a_link_average_power =
-					link_list[i]->extension<LinkEnergy>()->getAveragePower(
-							link_list[i]);
-			double link_time = computeTransferTime(link_list[i]);
-			total_time += link_time;
-			double a_link_total_energy = a_link_average_power
-					* (link_time);
+
+			LinkEnergy* link_energy = link_list[i]->extension<LinkEnergy>();
+			link_energy->update();
+
+			double a_link_average_power = link_energy->getAveragePower(
+					link_list[i]);
 			total_power += a_link_average_power;
-			//total_energy += a_link_total_energy;
+
+			double a_link_total_energy = link_energy->getALinkTotalEnergy(
+					link_list[i]);
+			total_energy += a_link_total_energy;
 			const char* name = link_list[i]->name();
 			if (strcmp(name, "__loopback__")) {
 				XBT_INFO("%s Usage %f Bandwidth %f Power %f Energy %f", name,
-						link_list[i]->extension<LinkEnergy>()->getLinkUsage(),
-						link_list[i]->bandwidth(), a_link_average_power,
-						a_link_total_energy);
+						link_energy->getLinkUsage(), link_list[i]->bandwidth(),
+						a_link_average_power, a_link_total_energy);
 			}
 		}
 	}
-	double t = surf_get_clock();
-	total_energy = total_power * t;
 
-	XBT_INFO("SgTotalPower %f SgTotalEnergy %f SgTransferTime %f", total_power, total_energy, t);
+	XBT_INFO("SgTotalPower %f SgTotalEnergy %f SgTransferTime %f", total_power,
+			total_energy, surf_get_clock());
 	xbt_free(link_list);
 }
 
 static void onSimulationEnd() {
-	XBT_DEBUG("onSimulationEnd is called ...");
 	computAndDisplayTotalEnergy();
 }
 /* **************************** Public interface *************************** */
@@ -437,7 +397,4 @@ double sg_link_get_usage(sg_link_t link) {
 	return link_energy->getLinkUsage();
 }
 
-void sg_on_simulation_end() {
-	onSimulationEnd();
-}
 SG_END_DECL()
