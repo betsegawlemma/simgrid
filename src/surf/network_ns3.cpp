@@ -508,11 +508,12 @@ void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, double bw, double lat) {
   pointToPoint.SetDeviceAttribute("DataRate", ns3::DataRateValue(ns3::DataRate(bw*8)));// NS3 takes bps, but we provide Bps
   pointToPoint.SetChannelAttribute("Delay", ns3::TimeValue(ns3::Seconds(lat)));
 
+/*
   char *filename = bprintf("link-%d-%d.tr", srcNum, dstNum);
   ns3::AsciiTraceHelper ascii;
   pointToPoint.EnableAsciiAll (ascii.CreateFileStream (filename));
   pointToPoint.EnablePcapAll ("tcp-bulk-send", false);
-  xbt_free(filename);
+  xbt_free(filename);*/
 
   netA.Add(pointToPoint.Install(a, b));
 

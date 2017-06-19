@@ -6,25 +6,23 @@
 			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
 			<prop id="watt_off" value="0" />
 		</host>
-		<host id="DST" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+		<host id="N1" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
 			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
 		</host>
-                <router id="R1"/>
-                <router id="R2"/>
-		<link id="L1" bandwidth="10Mbps" latency="10ms">
+                <host id="N2" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
+		</host>
+                <host id="DST" speed="100.0Mf,50.0Mf,20.0Mf" pstate="0">
+			<prop id="watt_per_state" value="100.0:120.0:200.0, 93.0:110.0:170.0, 90.0:105.0:150.0" />
+		</host>
+
+		<link id="L1" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
-<<<<<<< HEAD
-    <link id="L2" bandwidth="10Mbps" latency="10ms">
+                <link id="L2" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
-    <link id="L3" bandwidth="10Mbps" latency="10ms">
-=======
-                <link id="L2" bandwidth="10Mbps" latency="10ms">
-			<prop id="watt_range" value="10.3581:10.7479" />
-		</link>
-                <link id="L3" bandwidth="10Mbps" latency="10ms">
->>>>>>> 0cf72dba284580a226fe6852bba5a9301f9eb6d2
+                <link id="L3" bandwidth="100Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
 		<route src="SRC" dst="DST">
@@ -32,13 +30,13 @@
 			<link_ctn id="L2" />
 			<link_ctn id="L3" />
 		</route>
-                <route src="SRC" dst="R1">
+                <route src="SRC" dst="N1">
                        <link_ctn id="L1"/>
                 </route> 
-                <route src="R1" dst="R2">
+                <route src="N1" dst="N2">
                        <link_ctn id="L2"/>
                 </route> 
-                <route src="R2" dst="DST">
+                <route src="N2" dst="DST">
                        <link_ctn id="L3"/>
                 </route> 
 	</AS>

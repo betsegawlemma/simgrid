@@ -61,6 +61,7 @@ public:
 	~LinkEnergy();
 
 	double getAveragePower(sg_link_t link);
+
 	double getALinkTotalPower(sg_link_t link);
 	void initWattsRangeList();
 	double getLinkUsage();
@@ -70,6 +71,7 @@ private:
 	double computeALinkPower();
 	void computeALinkTotalEnergy();
 
+
 	simgrid::s4u::Link *link { };
 //	simgrid::s4u::Link *up_link { };
 //	simgrid::s4u::Link *down_link { };
@@ -77,7 +79,9 @@ private:
 	std::vector<LinkPowerRange> power_range_watts_list { };
 
 	std::map<const char*, double> a_link_average_power { };
+
 	std::map<const char*, double> a_link_total_energy { };
+
 
 	double last_updated { 0.0 }; /*< Timestamp of the last energy update event*/
 	double current_link_usage { 0.0 };
@@ -122,6 +126,7 @@ void LinkEnergy::update() {
 
 	this->current_link_usage = lmm_constraint_get_usage(
 			this->link->pimpl_->constraint());
+
 
 	computeALinkTotalEnergy();
 
@@ -192,10 +197,12 @@ void LinkEnergy::initWattsRangeList() {
 
 		double idleVal = xbt_str_parse_double(
 				(current_power_values.at(0)).c_str(), idle);
+
 		idleVal *= 2; // the idle value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
 		double busyVal = xbt_str_parse_double(
 				(current_power_values.at(1)).c_str(), busy);
 		busyVal *= 2; // the busy value is multiplied by 2 because SimGrid's 1 link is mapped to 2 NetDevices in ECOFEN
+
 		this->power_range_watts_list.push_back(
 				LinkPowerRange(idleVal, busyVal));
 		this->a_link_average_power[this->link->name()] = idleVal;
@@ -207,6 +214,7 @@ void LinkEnergy::initWattsRangeList() {
 	}
 
 }
+
 
 double LinkEnergy::computeALinkPower(){
 
@@ -257,6 +265,7 @@ void LinkEnergy::computeALinkTotalEnergy() {
 	double a_link_total_energy = current_power * (now - last_updated);
 	this->a_link_total_energy[this->link->name()] += a_link_total_energy;
 	last_updated = now;
+
 }
 
 double LinkEnergy::getLinkUsage() {
@@ -268,8 +277,10 @@ double LinkEnergy::getAveragePower(sg_link_t link) {
 	return this->a_link_average_power[link->name()];
 }
 
+
 double LinkEnergy::getALinkTotalEnergy(sg_link_t link) {
 	return this->a_link_total_energy[link->name()];
+
 }
 
 }
@@ -325,6 +336,7 @@ static void onLinkDestruction(simgrid::s4u::Link& link) {
 	link_energy->update();
 }
 
+
 static void computAndDisplayTotalEnergy() {
 	simgrid::s4u::Link* link = nullptr;
 	sg_link_t* link_list = link->listLink();
@@ -334,6 +346,7 @@ static void computAndDisplayTotalEnergy() {
 	double total_time = 0.0;
 	for (int i = 0; i < link_count; i++) {
 		if (link_list[i] != nullptr) {
+
 
 			LinkEnergy* link_energy = link_list[i]->extension<LinkEnergy>();
 			link_energy->update();

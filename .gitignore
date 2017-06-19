@@ -12,6 +12,8 @@
 *.plist
 *.trace
 *.class
+*.tr
+*.pcap
 .cproject # Eclipse cruft
 \#*
 .attach_pid* 
