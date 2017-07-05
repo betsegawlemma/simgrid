@@ -245,17 +245,13 @@ double LinkEnergy::computeALinkPower(){
 
 			double normalized_link_usage = this->current_link_usage
 					/ this->link->bandwidth();
-			//normalized_link_usage = std::pow(normalized_link_usage,2.5);
 			dynamic_power = power_slope * normalized_link_usage;
 
 		} else {
 
 			dynamic_power = 0.0;
 		}
-		double previous_power = this->a_link_average_power[this->link->name()]; //not necessary any more
 		double current_power = idle + dynamic_power;
-		double average_power = (previous_power + current_power) / 2; // not necessary any more
-		this->a_link_average_power[this->link->name()] = average_power; // not necessarry any more
 
 		return current_power;
 
