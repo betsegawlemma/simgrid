@@ -11,6 +11,7 @@
 
 #include <src/kernel/activity/ActivityImpl.hpp>
 #include <src/kernel/activity/CommImpl.hpp>
+#include <src/kernel/activity/ExecImpl.hpp>
 
 #include <boost/intrusive_ptr.hpp>
 
@@ -21,7 +22,7 @@ XBT_PUBLIC_DATA(const char*) simcall_names[]; /* Name of each simcall */
 
 #include "popping_enum.h" /* Definition of e_smx_simcall_t, with one value per simcall */
 
-typedef int (*simix_match_func_t)(void *, void *, smx_activity_t);
+typedef int (*simix_match_func_t)(void*, void*, simgrid::kernel::activity::CommImpl*);
 typedef void (*simix_copy_data_func_t)(smx_activity_t, void*, size_t);
 typedef void (*simix_clean_func_t)(void *);
 typedef void (*FPtr)(void); // Hide the ugliness
@@ -71,6 +72,20 @@ SG_END_DECL()
 
 #ifdef __cplusplus
 
+/* Defines the marshal/unmarshal functions for each type of parameters.
+ *
+ * They will be used in popping_accessors.h to define the functions allowing
+ * to retrieve/set each parameter of each simcall.
+ *
+ * There is a unmarshal_raw() function, which is exactly similar to unmarshal()
+ * for all types but boost::intrusive_ptr(T). For that type, the unmarshal()
+ * function builds a new intrusive_ptr wrapping the pointer (that is stored raw
+ * within the simcall) while the unmarshal_raw retrieves the raw pointer.
+ *
+ * This is used in <simcall>_getraw_<param> functions, that allow the
+ * model-checker, to read the data in the remote memory of the MCed.
+ */
+
 namespace simgrid {
 namespace simix {
 
@@ -85,15 +100,11 @@ class type {
 };
 
 template<typename T> struct marshal_t {};
-#define SIMIX_MARSHAL(T, field) \
-  inline void marshal(type<T>, u_smx_scalar& simcall, T value) \
-  { \
-    simcall.field = value; \
-  } \
-  inline T unmarshal(type<T>, u_smx_scalar const& simcall) \
-  { \
-    return simcall.field; \
-  }
+#define SIMIX_MARSHAL(T, field)                                                                                        \
+  inline void marshal(type<T>, u_smx_scalar& simcall, T value) { simcall.field = value; }                              \
+  inline T unmarshal(type<T>, u_smx_scalar const& simcall) { return simcall.field; }                                   \
+  inline T unmarshal_raw(type<T>, u_smx_scalar const& simcall)                                                         \
+  { /* Exactly same as unmarshal. It differs only for intrusive_ptr */ return simcall.field; }
 
 SIMIX_MARSHAL(char, c);
 SIMIX_MARSHAL(short, s);
@@ -109,8 +120,14 @@ SIMIX_MARSHAL(float, d);
 SIMIX_MARSHAL(double, d);
 SIMIX_MARSHAL(FPtr, fp);
 
-inline
-void unmarshal(type<void>, u_smx_scalar const& simcall) {}
+inline void unmarshal(type<void>, u_smx_scalar const& simcall)
+{
+  /* Nothing to do for void data */
+}
+inline void unmarshal_raw(type<void>, u_smx_scalar const& simcall)
+{
+  /* Nothing to do for void data */
+}
 
 template<class T> inline
 void marshal(type<T*>, u_smx_scalar& simcall, T* value)
@@ -122,18 +139,30 @@ T* unmarshal(type<T*>, u_smx_scalar const& simcall)
 {
   return static_cast<T*>(simcall.dp);
 }
+template <class T> inline T* unmarshal_raw(type<T*>, u_smx_scalar const& simcall)
+{
+  return static_cast<T*>(simcall.dp);
+}
 
 template <class T>
 inline void marshal(type<boost::intrusive_ptr<T>>, u_smx_scalar& simcall, boost::intrusive_ptr<T> value)
 {
-  intrusive_ptr_add_ref(&*value);
-  simcall.dp = static_cast<void*>(&*value);
+  if (value.get() == nullptr) { // Sometimes we return nullptr in an intrusive_ptr...
+    simcall.dp = nullptr;
+  } else {
+    intrusive_ptr_add_ref(&*value);
+    simcall.dp = static_cast<void*>(&*value);
+  }
 }
 template <class T> inline boost::intrusive_ptr<T> unmarshal(type<boost::intrusive_ptr<T>>, u_smx_scalar const& simcall)
 {
+  // refcount was already increased during the marshaling, thus the "false" as last argument
   boost::intrusive_ptr<T> res = boost::intrusive_ptr<T>(static_cast<T*>(simcall.dp), false);
-  intrusive_ptr_release(&*res);
   return res;
+}
+template <class T> inline T* unmarshal_raw(type<boost::intrusive_ptr<T>>, u_smx_scalar const& simcall)
+{
+  return static_cast<T*>(simcall.dp);
 }
 
 template<class R, class... T> inline
@@ -146,6 +175,10 @@ auto unmarshal(type<R(*)(T...)>, u_smx_scalar simcall) -> R(*)(T...)
 {
   return (R(*)(T...)) simcall.fp;
 }
+template <class R, class... T> inline auto unmarshal_raw(type<R (*)(T...)>, u_smx_scalar simcall) -> R (*)(T...)
+{
+  return (R(*)(T...))simcall.fp;
+}
 
 template<class T> inline
 void marshal(u_smx_scalar& simcall, T const& value)
@@ -154,6 +187,10 @@ void marshal(u_smx_scalar& simcall, T const& value)
 }
 template<class T> inline
 typename std::remove_reference<T>::type unmarshal(u_smx_scalar& simcall)
+{
+  return unmarshal(type<T>(), simcall);
+}
+template <class T> inline typename std::remove_reference<T>::type unmarshal_raw(u_smx_scalar& simcall)
 {
   return unmarshal(type<T>(), simcall);
 }

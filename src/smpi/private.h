@@ -61,7 +61,7 @@ XBT_PRIVATE void smpi_deployment_register_process(const char* instance_id, int r
 XBT_PRIVATE MPI_Comm* smpi_deployment_comm_world(const char* instance_id);
 XBT_PRIVATE msg_bar_t smpi_deployment_finalization_barrier(const char* instance_id);
 XBT_PRIVATE void smpi_deployment_cleanup_instances();
- 
+
 XBT_PRIVATE void smpi_comm_copy_buffer_callback(smx_activity_t comm, void *buff, size_t buff_size);
 
 XBT_PRIVATE void smpi_comm_null_copy_buffer_callback(smx_activity_t comm, void *buff, size_t buff_size);
@@ -75,13 +75,6 @@ XBT_PRIVATE void smpi_mpi_init();
 // utilities
 extern XBT_PRIVATE double smpi_cpu_threshold;
 extern XBT_PRIVATE double smpi_host_speed;
-
-#define SMPI_PRIVATIZE_NONE 0
-#define SMPI_PRIVATIZE_MMAP 1
-#define SMPI_PRIVATIZE_DLOPEN 2
-#define SMPI_PRIVATIZE_DEFAULT SMPI_PRIVATIZE_MMAP
-extern XBT_PRIVATE int smpi_privatize_global_variables;
-
 extern XBT_PRIVATE char* smpi_start_data_exe; //start of the data+bss segment of the executable
 extern XBT_PRIVATE int smpi_size_data_exe; //size of the data+bss segment of the executable
 
@@ -90,7 +83,7 @@ extern XBT_PRIVATE shared_malloc_type smpi_cfg_shared_malloc; // Whether to acti
 
 XBT_PRIVATE void smpi_switch_data_segment(int dest);
 XBT_PRIVATE void smpi_really_switch_data_segment(int dest);
-XBT_PRIVATE int smpi_is_privatisation_file(char* file);
+XBT_PRIVATE int smpi_is_privatization_file(char* file);
 
 XBT_PRIVATE void smpi_get_executable_global_size();
 XBT_PRIVATE void smpi_initialize_global_memory_segments();
@@ -368,22 +361,15 @@ void mpi_file_write_ ( int* fh, void* buf, int* count, int* datatype, MPI_Status
 
 // TODO, make this static and expose it more cleanly
 
-typedef struct s_smpi_privatisation_region {
+typedef struct s_smpi_privatization_region {
   void* address;
   int file_descriptor;
-} s_smpi_privatisation_region_t;
-typedef s_smpi_privatisation_region_t* smpi_privatisation_region_t;
+} s_smpi_privatization_region_t;
+typedef s_smpi_privatization_region_t* smpi_privatization_region_t;
 
-extern XBT_PRIVATE smpi_privatisation_region_t smpi_privatisation_regions;
+extern XBT_PRIVATE smpi_privatization_region_t smpi_privatization_regions;
 extern XBT_PRIVATE int smpi_loaded_page;
 extern XBT_PRIVATE int smpi_universe_size;
-
-XBT_PRIVATE int SIMIX_process_get_PID(smx_actor_t self);
-
-static inline __attribute__ ((always_inline))
-int smpi_process_index_of_smx_process(smx_actor_t process) {
-  return SIMIX_process_get_PID(process) -1;
-}
 
 SG_END_DECL()
 #endif

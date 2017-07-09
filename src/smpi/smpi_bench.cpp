@@ -30,7 +30,7 @@ double smpi_host_speed;
 
 shared_malloc_type smpi_cfg_shared_malloc = shmalloc_global;
 double smpi_total_benched_time = 0;
-smpi_privatisation_region_t smpi_privatisation_regions;
+smpi_privatization_region_t smpi_privatization_regions;
 
 void smpi_bench_destroy()
 {
@@ -428,7 +428,7 @@ extern "C" { /** These functions will be called from the user code **/
     smpi_trace_set_call_location(file, *line);
   }
 
-  /** 
+  /**
    * Required for Fortran if -fsecond-underscore is activated
    */
   void smpi_trace_set_call_location__(const char* file, int* line) {

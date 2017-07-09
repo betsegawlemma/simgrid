@@ -10,6 +10,7 @@
 #include "src/mc/mc_replay.h"
 #include "src/smpi/SmpiHost.hpp"
 #include "src/smpi/private.h"
+#include "src/smpi/private.hpp"
 #include "src/smpi/smpi_comm.hpp"
 #include "src/smpi/smpi_datatype.hpp"
 #include "src/smpi/smpi_op.hpp"
@@ -31,7 +32,7 @@ extern void (*smpi_comm_copy_data_callback) (smx_activity_t, void*, size_t);
 namespace simgrid{
 namespace smpi{
 
-Request::Request(void *buf, int count, MPI_Datatype datatype, int src, int dst, int tag, MPI_Comm comm, unsigned flags) : buf_(buf), old_type_(datatype), src_(src), dst_(dst), tag_(tag), comm_(comm), flags_(flags) 
+Request::Request(void *buf, int count, MPI_Datatype datatype, int src, int dst, int tag, MPI_Comm comm, unsigned flags) : buf_(buf), old_type_(datatype), src_(src), dst_(dst), tag_(tag), comm_(comm), flags_(flags)
 {
   void *old_buf = nullptr;
 // FIXME Handle the case of a partial shared malloc.
@@ -117,7 +118,8 @@ void Request::unref(MPI_Request* request)
   }
 }
 
-int Request::match_recv(void* a, void* b, smx_activity_t ignored) {
+int Request::match_recv(void* a, void* b, simgrid::kernel::activity::CommImpl* ignored)
+{
   MPI_Request ref = static_cast<MPI_Request>(a);
   MPI_Request req = static_cast<MPI_Request>(b);
   XBT_DEBUG("Trying to match a recv of src %d against %d, tag %d against %d",ref->src_,req->src_, ref->tag_, req->tag_);
@@ -131,7 +133,7 @@ int Request::match_recv(void* a, void* b, smx_activity_t ignored) {
       ref->real_src_ = req->src_;
     if(ref->tag_ == MPI_ANY_TAG)
       ref->real_tag_ = req->tag_;
-    if(ref->real_size_ < req->real_size_) 
+    if(ref->real_size_ < req->real_size_)
       ref->truncated_ = 1;
     if(req->detached_==1)
       ref->detached_sender_=req; //tie the sender to the receiver, as it is detached and has to be freed in the receiver
@@ -140,7 +142,8 @@ int Request::match_recv(void* a, void* b, smx_activity_t ignored) {
   }else return 0;
 }
 
-int Request::match_send(void* a, void* b,smx_activity_t ignored) {
+int Request::match_send(void* a, void* b, simgrid::kernel::activity::CommImpl* ignored)
+{
   MPI_Request ref = static_cast<MPI_Request>(a);
   MPI_Request req = static_cast<MPI_Request>(b);
   XBT_DEBUG("Trying to match a send of src %d against %d, tag %d against %d",ref->src_,req->src_, ref->tag_, req->tag_);
@@ -339,19 +342,18 @@ void Request::start()
 
     if (async_small_thresh == 0 && (flags_ & RMA) == 0 ) {
       mailbox = process->mailbox();
-    } 
+    }
     else if (((flags_ & RMA) != 0) || static_cast<int>(size_) < async_small_thresh) {
       //We have to check both mailboxes (because SSEND messages are sent to the large mbox).
       //begin with the more appropriate one : the small one.
       mailbox = process->mailbox_small();
       XBT_DEBUG("Is there a corresponding send already posted in the small mailbox %p (in case of SSEND)?", mailbox);
-      smx_activity_t action = simcall_comm_iprobe(mailbox, 0, src_,tag_, &match_recv,
-                                                  static_cast<void*>(this));
+      smx_activity_t action = simcall_comm_iprobe(mailbox, 0, &match_recv, static_cast<void*>(this));
 
       if (action == nullptr) {
         mailbox = process->mailbox();
         XBT_DEBUG("No, nothing in the small mailbox test the other one : %p", mailbox);
-        action = simcall_comm_iprobe(mailbox, 0, src_,tag_, &match_recv, static_cast<void*>(this));
+        action = simcall_comm_iprobe(mailbox, 0, &match_recv, static_cast<void*>(this));
         if (action == nullptr) {
           XBT_DEBUG("Still nothing, switch back to the small mailbox : %p", mailbox);
           mailbox = process->mailbox_small();
@@ -362,7 +364,7 @@ void Request::start()
     } else {
       mailbox = process->mailbox_small();
       XBT_DEBUG("Is there a corresponding send already posted the small mailbox?");
-      smx_activity_t action = simcall_comm_iprobe(mailbox, 0, src_,tag_, &match_recv, static_cast<void*>(this));
+      smx_activity_t action = simcall_comm_iprobe(mailbox, 0, &match_recv, static_cast<void*>(this));
 
       if (action == nullptr) {
         XBT_DEBUG("No, nothing in the permanent receive mailbox");
@@ -417,8 +419,8 @@ void Request::start()
     if (detached_ != 0 || ((flags_ & (ISEND | SSEND)) != 0)) { // issend should be treated as isend
       // isend and send timings may be different
       sleeptime = ((flags_ & ISEND) != 0)
-                      ? simgrid::s4u::Actor::self()->host()->extension<simgrid::smpi::SmpiHost>()->oisend(size_)
-                      : simgrid::s4u::Actor::self()->host()->extension<simgrid::smpi::SmpiHost>()->osend(size_);
+                      ? simgrid::s4u::Actor::self()->getHost()->extension<simgrid::smpi::SmpiHost>()->oisend(size_)
+                      : simgrid::s4u::Actor::self()->getHost()->extension<simgrid::smpi::SmpiHost>()->osend(size_);
     }
 
     if(sleeptime > 0.0){
@@ -438,8 +440,7 @@ void Request::start()
     } else if (((flags_ & RMA) != 0) || static_cast<int>(size_) < async_small_thresh) { // eager mode
       mailbox = process->mailbox();
       XBT_DEBUG("Is there a corresponding recv already posted in the large mailbox %p?", mailbox);
-      smx_activity_t action = simcall_comm_iprobe(mailbox, 1,dst_, tag_, &match_send,
-                                                  static_cast<void*>(this));
+      smx_activity_t action = simcall_comm_iprobe(mailbox, 1, &match_send, static_cast<void*>(this));
       if (action == nullptr) {
         if ((flags_ & SSEND) == 0){
           mailbox = process->mailbox_small();
@@ -447,7 +448,7 @@ void Request::start()
         } else {
           mailbox = process->mailbox_small();
           XBT_DEBUG("SSEND : Is there a corresponding recv already posted in the small mailbox %p?", mailbox);
-          action = simcall_comm_iprobe(mailbox, 1,dst_, tag_, &match_send, static_cast<void*>(this));
+          action = simcall_comm_iprobe(mailbox, 1, &match_send, static_cast<void*>(this));
           if (action == nullptr) {
             XBT_DEBUG("No, we are first, send to large mailbox");
             mailbox = process->mailbox();
@@ -481,7 +482,7 @@ void Request::start()
 
 void Request::startall(int count, MPI_Request * requests)
 {
-  if(requests== nullptr) 
+  if(requests== nullptr)
     return;
 
   for(int i = 0; i < count; i++) {
@@ -496,7 +497,7 @@ int Request::test(MPI_Request * request, MPI_Status * status) {
   // because the time will not normally advance when only calls to MPI_Test are made -> deadlock
   // multiplier to the sleeptime, to increase speed of execution, each failed test will increase it
   static int nsleeps = 1;
-  if(smpi_test_sleep > 0)  
+  if(smpi_test_sleep > 0)
     simcall_process_sleep(nsleeps*smpi_test_sleep);
 
   Status::empty(status);
@@ -530,7 +531,7 @@ int Request::testsome(int incount, MPI_Request requests[], int *indices, MPI_Sta
         count++;
         if (status != MPI_STATUSES_IGNORE)
           status[i] = *pstat;
-        if ((requests[i] != MPI_REQUEST_NULL) && requests[i]->flags_ & NON_PERSISTENT)
+        if ((requests[i] != MPI_REQUEST_NULL) && (requests[i]->flags_ & NON_PERSISTENT))
           requests[i] = MPI_REQUEST_NULL;
       }
     } else {
@@ -544,7 +545,7 @@ int Request::testsome(int incount, MPI_Request requests[], int *indices, MPI_Sta
 
 int Request::testany(int count, MPI_Request requests[], int *index, MPI_Status * status)
 {
-  std::vector<simgrid::kernel::activity::ActivityImpl*> comms;
+  std::vector<simgrid::kernel::activity::ActivityImplPtr> comms;
   comms.reserve(count);
 
   int i;
@@ -562,12 +563,12 @@ int Request::testany(int count, MPI_Request requests[], int *index, MPI_Status *
   if (not map.empty()) {
     //multiplier to the sleeptime, to increase speed of execution, each failed testany will increase it
     static int nsleeps = 1;
-    if(smpi_test_sleep > 0) 
+    if(smpi_test_sleep > 0)
       simcall_process_sleep(nsleeps*smpi_test_sleep);
 
     i = simcall_comm_testany(comms.data(), comms.size()); // The i-th element in comms matches!
     if (i != -1) { // -1 is not MPI_UNDEFINED but a SIMIX return code. (nothing matches)
-      *index = map[i]; 
+      *index = map[i];
       finish_wait(&requests[*index],status);
       flag             = 1;
       nsleeps          = 1;
@@ -624,7 +625,7 @@ void Request::iprobe(int source, int tag, MPI_Comm comm, int* flag, MPI_Status* 
   // nsleeps is a multiplier to the sleeptime, to increase speed of execution, each failed iprobe will increase it
   // This can speed up the execution of certain applications by an order of magnitude, such as HPL
   static int nsleeps = 1;
-  double speed       = simgrid::s4u::Actor::self()->host()->speed();
+  double speed        = simgrid::s4u::Actor::self()->getHost()->getSpeed();
   double maxrate = xbt_cfg_get_double("smpi/iprobe-cpu-usage");
   MPI_Request request = new Request(nullptr, 0, MPI_CHAR, source == MPI_ANY_SOURCE ? MPI_ANY_SOURCE :
                  comm->group()->index(source), comm->rank(), tag, comm, PERSISTENT | RECV);
@@ -640,20 +641,18 @@ void Request::iprobe(int source, int tag, MPI_Comm comm, int* flag, MPI_Status* 
   if (xbt_cfg_get_int("smpi/async-small-thresh") > 0){
       mailbox = smpi_process()->mailbox_small();
       XBT_DEBUG("Trying to probe the perm recv mailbox");
-      request->action_ = simcall_comm_iprobe(mailbox, 0, request->src_, request->tag_, &match_recv,
-                                            static_cast<void*>(request));
+      request->action_ = simcall_comm_iprobe(mailbox, 0, &match_recv, static_cast<void*>(request));
   }
 
   if (request->action_ == nullptr){
     mailbox = smpi_process()->mailbox();
     XBT_DEBUG("trying to probe the other mailbox");
-    request->action_ = simcall_comm_iprobe(mailbox, 0, request->src_,request->tag_, &match_recv,
-                                          static_cast<void*>(request));
+    request->action_ = simcall_comm_iprobe(mailbox, 0, &match_recv, static_cast<void*>(request));
   }
 
   if (request->action_ != nullptr){
-    simgrid::kernel::activity::CommImpl* sync_comm =
-        static_cast<simgrid::kernel::activity::CommImpl*>(request->action_);
+    simgrid::kernel::activity::CommImplPtr sync_comm =
+        boost::static_pointer_cast<simgrid::kernel::activity::CommImpl>(request->action_);
     MPI_Request req                            = static_cast<MPI_Request>(sync_comm->src_data);
     *flag = 1;
     if(status != MPI_STATUS_IGNORE && (req->flags_ & PREPARED) == 0) {
@@ -724,7 +723,8 @@ void Request::finish_wait(MPI_Request* request, MPI_Status * status)
   }
   if(req->detached_sender_ != nullptr){
     //integrate pseudo-timing for buffering of small messages, do not bother to execute the simcall if 0
-    double sleeptime = simgrid::s4u::Actor::self()->host()->extension<simgrid::smpi::SmpiHost>()->orecv(req->real_size());
+    double sleeptime =
+        simgrid::s4u::Actor::self()->getHost()->extension<simgrid::smpi::SmpiHost>()->orecv(req->real_size());
     if(sleeptime > 0.0){
       simcall_process_sleep(sleeptime);
       XBT_DEBUG("receiving size of %zu : sleep %f ", req->real_size_, sleeptime);
@@ -757,22 +757,23 @@ void Request::wait(MPI_Request * request, MPI_Status * status)
 int Request::waitany(int count, MPI_Request requests[], MPI_Status * status)
 {
   s_xbt_dynar_t comms; // Keep it on stack to save some extra mallocs
-  int i;
-  int size = 0;
   int index = MPI_UNDEFINED;
-  int *map;
 
   if(count > 0) {
+    int size = 0;
     // Wait for a request to complete
-    xbt_dynar_init(&comms, sizeof(smx_activity_t), nullptr);
-    map = xbt_new(int, count);
+    xbt_dynar_init(&comms, sizeof(smx_activity_t), [](void*ptr){
+      intrusive_ptr_release(*(simgrid::kernel::activity::ActivityImpl**)ptr);
+    });
+    int *map = xbt_new(int, count);
     XBT_DEBUG("Wait for one of %d", count);
-    for(i = 0; i < count; i++) {
+    for(int i = 0; i < count; i++) {
       if (requests[i] != MPI_REQUEST_NULL && not(requests[i]->flags_ & PREPARED) &&
           not(requests[i]->flags_ & FINISHED)) {
         if (requests[i]->action_ != nullptr) {
           XBT_DEBUG("Waiting any %p ", requests[i]);
-          xbt_dynar_push(&comms, &requests[i]->action_);
+          intrusive_ptr_add_ref(requests[i]->action_.get());
+          xbt_dynar_push_as(&comms, simgrid::kernel::activity::ActivityImpl*, requests[i]->action_.get());
           map[size] = i;
           size++;
         } else {
@@ -786,8 +787,9 @@ int Request::waitany(int count, MPI_Request requests[], MPI_Status * status)
         }
       }
     }
-    if(size > 0) {
-      i = simcall_comm_waitany(&comms, -1);
+    if (size > 0) {
+      XBT_DEBUG("Enter waitany for %lu comms", xbt_dynar_length(&comms));
+      int i = simcall_comm_waitany(&comms, -1);
 
       // not MPI_UNDEFINED, as this is a simix return code
       if (i != -1) {
@@ -822,7 +824,7 @@ int Request::waitall(int count, MPI_Request requests[], MPI_Status status[])
   std::vector<MPI_Request> accumulates;
   int index;
   MPI_Status stat;
-  MPI_Status *pstat = status == MPI_STATUSES_IGNORE ? MPI_STATUS_IGNORE : &stat;
+  MPI_Status *pstat = (status == MPI_STATUSES_IGNORE ? MPI_STATUS_IGNORE : &stat);
   int retvalue = MPI_SUCCESS;
   //tag invalid requests in the set
   if (status != MPI_STATUSES_IGNORE) {
@@ -840,7 +842,7 @@ int Request::waitall(int count, MPI_Request requests[], MPI_Status status[])
       wait(&requests[c],pstat);
       index = c;
     } else {
-      index = waitany(count, requests, pstat);
+      index = waitany(count, (MPI_Request*)requests, pstat);
       if (index == MPI_UNDEFINED)
         break;
 
@@ -870,15 +872,12 @@ int Request::waitall(int count, MPI_Request requests[], MPI_Status status[])
 
 int Request::waitsome(int incount, MPI_Request requests[], int *indices, MPI_Status status[])
 {
-  int i;
   int count = 0;
-  int index;
   MPI_Status stat;
   MPI_Status *pstat = status == MPI_STATUSES_IGNORE ? MPI_STATUS_IGNORE : &stat;
 
-  for(i = 0; i < incount; i++)
-  {
-    index=waitany(incount, requests, pstat);
+  for (int i = 0; i < incount; i++) {
+    int index = waitany(incount, requests, pstat);
     if(index!=MPI_UNDEFINED){
       indices[count] = index;
       count++;
@@ -912,9 +911,10 @@ int Request::add_f() {
 }
 
 void Request::free_f(int id) {
-  char key[KEY_SIZE];
-  if(id!=MPI_FORTRAN_REQUEST_NULL)
+  if (id != MPI_FORTRAN_REQUEST_NULL) {
+    char key[KEY_SIZE];
     xbt_dict_remove(F2C::f2c_lookup(), get_key_id(key, id));
+  }
 }
 
 }

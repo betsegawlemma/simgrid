@@ -6,6 +6,7 @@
 
 #include <xbt/base.h>
 
+#include "FileImpl.hpp"
 #include "StorageImpl.hpp"
 
 #ifndef STORAGE_N11_HPP_
@@ -64,7 +65,7 @@ public:
   void resume();
   bool isSuspended();
   void setMaxDuration(double duration);
-  void setPriority(double priority);
+  void setSharingWeight(double priority);
 };
 
 }

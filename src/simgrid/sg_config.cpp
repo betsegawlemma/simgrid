@@ -346,17 +346,16 @@ void sg_config_init(int *argc, char **argv)
   simgrid::config::bindFlag(sg_sender_gap, {"network/sender-gap", "network/sender_gap"},
                             "Minimum gap between two overlapping sends");
 
-  sg_latency_factor = 1.0;
+  sg_latency_factor = 13.01; // comes from the default LV08 network model
   simgrid::config::bindFlag(sg_latency_factor, {"network/latency-factor", "network/latency_factor"},
                             "Correction factor to apply to the provided latency (default value set by network model)");
 
-  sg_bandwidth_factor = 1.0;
+  sg_bandwidth_factor = 0.97; // comes from the default LV08 network model
   simgrid::config::bindFlag(
       sg_bandwidth_factor, {"network/bandwidth-factor", "network/bandwidth_factor"},
       "Correction factor to apply to the provided bandwidth (default value set by network model)");
 
-  // real default for "network/weight-S" is set in network_*.cpp:
-  sg_weight_S_parameter = NAN;
+  sg_weight_S_parameter = 20537; // comes from the default LV08 network model
   simgrid::config::bindFlag(
       sg_weight_S_parameter, {"network/weight-S", "network/weight_S"},
       "Correction factor to apply to the weight of competing streams (default value set by network model)");
@@ -468,11 +467,11 @@ void sg_config_init(int *argc, char **argv)
     xbt_cfg_register_string("smpi/lat-factor",
         "65472:11.6436;15424:3.48845;9376:2.59299;5776:2.18796;3484:1.88101;1426:1.61075;732:1.9503;257:1.95341;0:2.01467", nullptr, "Latency factors for smpi.");
     xbt_cfg_register_alias("smpi/lat-factor","smpi/lat_factor");
-    
+
     xbt_cfg_register_string("smpi/IB-penalty-factors", "0.965;0.925;1.35", nullptr,
         "Correction factor to communications using Infiniband model with contention (default value based on Stampede cluster profiling)");
     xbt_cfg_register_alias("smpi/IB-penalty-factors","smpi/IB_penalty_factors");
-    
+
 #if HAVE_SMPI
     xbt_cfg_register_double("smpi/host-speed", 20000.0, nullptr, "Speed of the host running the simulation (in flop/s). Used to bench the operations.");
     xbt_cfg_register_alias("smpi/host-speed","smpi/running_power");

@@ -25,7 +25,7 @@ XBT_PUBLIC_CLASS Activity {
 
 protected:
   Activity()  = default;
-  ~Activity() = default;
+  virtual ~Activity() = default;
 
 public:
   Activity(Activity const&) = delete;
@@ -61,7 +61,7 @@ public:
   void *getUserData() { return userData_; }
 
 private:
-  simgrid::kernel::activity::ActivityImpl *pimpl_ = nullptr;
+  simgrid::kernel::activity::ActivityImplPtr pimpl_ = nullptr;
   e_s4u_activity_state_t state_ = inited;
   double remains_ = 0;
   void *userData_ = nullptr;

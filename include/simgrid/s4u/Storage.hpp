@@ -17,7 +17,7 @@
 namespace simgrid {
 namespace s4u {
 
-std::map<std::string, Storage*>* allStorages();
+XBT_ATTRIB_PUBLIC std::map<std::string, Storage*>* allStorages();
 
 XBT_PUBLIC_CLASS Storage
 {
@@ -29,20 +29,21 @@ public:
   virtual ~Storage() = default;
   /** Retrieve a Storage by its name. It must exist in the platform file */
   static Storage* byName(const char* name);
-  const char* name();
-  const char* host();
-  sg_size_t sizeFree();
-  sg_size_t sizeUsed();
+  const char* getName();
+  const char* getType();
+  Host* getHost();
+  sg_size_t getSizeFree();
+  sg_size_t getSizeUsed();
   /** Retrieve the total amount of space of this storage element */
-  sg_size_t size();
-  xbt_dict_t properties();
-  const char* property(const char* key);
-  void setProperty(const char* key, char* value);
-  std::map<std::string, sg_size_t*>* content();
+  sg_size_t getSize();
 
-public:
+  xbt_dict_t getProperties();
+  const char* getProperty(const char* key);
+  void setProperty(const char* key, char* value);
+  std::map<std::string, sg_size_t>* getContent();
+
   void setUserdata(void* data) { userdata_ = data; }
-  void* userdata() { return userdata_; }
+  void* getUserdata() { return userdata_; }
 
   /* The signals */
   /** @brief Callback signal fired when a new Link is created */
@@ -51,10 +52,12 @@ public:
   /** @brief Callback signal fired when a Link is destroyed */
   static simgrid::xbt::signal<void(s4u::Storage&)> onDestruction;
 
+  Host* attached_to_              = nullptr;
+  surf::StorageImpl* const pimpl_ = nullptr;
+
 private:
   std::string name_;
-  surf::StorageImpl* const pimpl_ = nullptr;
-  void* userdata_      = nullptr;
+  void* userdata_ = nullptr;
 };
 
 } /* namespace s4u */

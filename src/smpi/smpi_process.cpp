@@ -8,6 +8,7 @@
 #include "src/msg/msg_private.h"
 #include "src/simix/smx_private.h"
 #include "src/smpi/private.h"
+#include "src/smpi/private.hpp"
 #include "src/smpi/smpi_process.hpp"
 #include "src/smpi/smpi_group.hpp"
 #include "src/smpi/smpi_comm.hpp"
@@ -76,7 +77,7 @@ void Process::set_data(int index, int* argc, char*** argv)
     instance_id_ = instance_id;
     index_ = index;
 
-    static_cast<simgrid::MsgActorExt*>(SIMIX_process_self()->data)->data = this;
+    static_cast<simgrid::msg::ActorExt*>(SIMIX_process_self()->userdata)->data = this;
 
     if (*argc > 3) {
       memmove(&(*argv)[0], &(*argv)[2], sizeof(char *) * (*argc - 2));
@@ -273,7 +274,7 @@ void Process::init(int *argc, char ***argv){
     smx_actor_t proc = SIMIX_process_self();
     proc->context->set_cleanup(&MSG_process_cleanup_from_SIMIX);
 
-    int index = smpi_process_index_of_smx_process(proc);
+    int index = proc->pid - 1;
 
     if(index_to_process_data == nullptr){
       index_to_process_data=static_cast<int*>(xbt_malloc(SIMIX_process_count()*sizeof(int)));

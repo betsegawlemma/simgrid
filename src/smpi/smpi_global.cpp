@@ -12,6 +12,7 @@
 #include "src/smpi/SmpiHost.hpp"
 #include "xbt/config.hpp"
 #include "src/smpi/private.h"
+#include "src/smpi/private.hpp"
 #include "src/smpi/smpi_coll.hpp"
 #include "src/smpi/smpi_comm.hpp"
 #include "src/smpi/smpi_group.hpp"
@@ -79,7 +80,7 @@ simgrid::smpi::Process* smpi_process()
   smx_actor_t me = SIMIX_process_self();
   if (me == nullptr) // This happens sometimes (eg, when linking against NS3 because it pulls openMPI...)
     return nullptr;
-  simgrid::MsgActorExt* msgExt = static_cast<simgrid::MsgActorExt*>(me->data);
+  simgrid::msg::ActorExt* msgExt = static_cast<simgrid::msg::ActorExt*>(me->userdata);
   return static_cast<simgrid::smpi::Process*>(msgExt->data);
 }
 
@@ -144,7 +145,8 @@ static void check_blocks(std::vector<std::pair<size_t, size_t>> &private_blocks,
 
 void smpi_comm_copy_buffer_callback(smx_activity_t synchro, void *buff, size_t buff_size)
 {
-  simgrid::kernel::activity::CommImpl* comm = dynamic_cast<simgrid::kernel::activity::CommImpl*>(synchro);
+  simgrid::kernel::activity::CommImplPtr comm =
+      boost::dynamic_pointer_cast<simgrid::kernel::activity::CommImpl>(synchro);
   int src_shared                        = 0;
   int dst_shared                        = 0;
   size_t src_offset                     = 0;
@@ -179,7 +181,7 @@ void smpi_comm_copy_buffer_callback(smx_activity_t synchro, void *buff, size_t b
        XBT_DEBUG("Privatization : We are copying from a zone inside global memory... Saving data to temp buffer !");
 
        smpi_switch_data_segment(
-           static_cast<simgrid::smpi::Process*>((static_cast<simgrid::MsgActorExt*>(comm->src_proc->data)->data))
+           static_cast<simgrid::smpi::Process*>((static_cast<simgrid::msg::ActorExt*>(comm->src_proc->userdata)->data))
                ->index());
        tmpbuff = static_cast<void*>(xbt_malloc(buff_size));
        memcpy_private(tmpbuff, buff, private_blocks);
@@ -189,7 +191,7 @@ void smpi_comm_copy_buffer_callback(smx_activity_t synchro, void *buff, size_t b
       && ((char*)comm->dst_buff < smpi_start_data_exe + smpi_size_data_exe )){
        XBT_DEBUG("Privatization : We are copying to a zone inside global memory - Switch data segment");
        smpi_switch_data_segment(
-           static_cast<simgrid::smpi::Process*>((static_cast<simgrid::MsgActorExt*>(comm->dst_proc->data)->data))
+           static_cast<simgrid::smpi::Process*>((static_cast<simgrid::msg::ActorExt*>(comm->dst_proc->userdata)->data))
                ->index());
   }
   XBT_DEBUG("Copying %zu bytes from %p to %p", buff_size, tmpbuff,comm->dst_buff);
@@ -242,7 +244,7 @@ void smpi_global_init()
     xbt_os_walltimer_start(global_timer);
   }
 
-  if (xbt_cfg_get_string("smpi/comp-adjustment-file")[0] != '\0') { 
+  if (xbt_cfg_get_string("smpi/comp-adjustment-file")[0] != '\0') {
     std::string filename {xbt_cfg_get_string("smpi/comp-adjustment-file")};
     std::ifstream fstream(filename);
     if (not fstream.is_open()) {
@@ -549,8 +551,6 @@ int smpi_main(const char* executable, int argc, char *argv[])
   SIMIX_create_environment(argv[1]);
   SIMIX_comm_set_copy_data_callback(smpi_comm_copy_buffer_callback);
 
-  static std::size_t rank = 0;
-
   smpi_init_options();
 
   if (smpi_privatize_global_variables == SMPI_PRIVATIZE_DLOPEN) {
@@ -561,6 +561,7 @@ int smpi_main(const char* executable, int argc, char *argv[])
     struct stat fdin_stat;
     stat(executable_copy.c_str(), &fdin_stat);
     off_t fdin_size = fdin_stat.st_size;
+    static std::size_t rank = 0;
 
     simix_global->default_function = [executable_copy, fdin_size](std::vector<std::string> args) {
       return std::function<void()>([executable_copy, fdin_size, args] {
@@ -650,7 +651,7 @@ int smpi_main(const char* executable, int argc, char *argv[])
   if (MC_is_active()) {
     MC_run();
   } else {
-  
+
     SIMIX_run();
 
     xbt_os_walltimer_stop(global_timer);
@@ -660,7 +661,7 @@ int smpi_main(const char* executable, int argc, char *argv[])
           "The simulation took %g seconds (after parsing and platform setup)\n"
           "%g seconds were actual computation of the application",
           SIMIX_get_clock(), global_time , smpi_total_benched_time);
-          
+
       if (smpi_total_benched_time/global_time>=0.75)
       XBT_INFO("More than 75%% of the time was spent inside the application code.\n"
       "You may want to use sampling functions or trace replay to reduce this.");
@@ -698,7 +699,7 @@ void SMPI_finalize(){
 }
 
 void smpi_mpi_init() {
-  if(smpi_init_sleep > 0) 
+  if(smpi_init_sleep > 0)
     simcall_process_sleep(smpi_init_sleep);
 }
 
@@ -713,7 +714,7 @@ double smpi_mpi_wtime(){
     //     }
     // because the time will not normally advance when only calls to MPI_Wtime
     // are made -> deadlock (MPI_Wtime never reaches the time limit)
-    if(smpi_wtime_sleep > 0) 
+    if(smpi_wtime_sleep > 0)
       simcall_process_sleep(smpi_wtime_sleep);
     smpi_bench_begin();
   } else {

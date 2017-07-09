@@ -23,24 +23,6 @@ Comm::~Comm()
       XBT_INFO("pimpl_ is null");
     xbt_backtrace_display_current();
   }
-  if (pimpl_)
-    pimpl_->unref();
-}
-
-s4u::CommPtr Comm::send_init(s4u::MailboxPtr chan)
-{
-  CommPtr res   = CommPtr(new s4u::Comm());
-  res->sender_ = SIMIX_process_self();
-  res->mailbox_ = chan;
-  return res;
-}
-
-s4u::CommPtr Comm::recv_init(s4u::MailboxPtr chan)
-{
-  CommPtr res    = CommPtr(new s4u::Comm());
-  res->receiver_ = SIMIX_process_self();
-  res->mailbox_ = chan;
-  return res;
 }
 
 void Comm::setRate(double rate) {
@@ -90,6 +72,7 @@ void Comm::start() {
         matchFunction_, cleanFunction_, copyDataFunction_,
         userData_, detached_);
   } else if (dstBuff_ != nullptr) { // Receiver side
+    xbt_assert(not detached_, "Receive cannot be detached");
     pimpl_ = simcall_comm_irecv(receiver_, mailbox_->getImpl(), dstBuff_, &dstBuffSize_,
         matchFunction_, copyDataFunction_,
         userData_, rate_);
@@ -100,7 +83,10 @@ void Comm::start() {
   state_ = started;
 }
 void Comm::wait() {
-  xbt_assert(state_ == started || state_ == inited);
+  xbt_assert(state_ == started || state_ == inited || state_ == finished);
+
+  if (state_ == finished)
+    return;
 
   if (state_ == started)
     simcall_comm_wait(pimpl_, -1/*timeout*/);
@@ -117,17 +103,17 @@ void Comm::wait() {
     }
   }
   state_ = finished;
-  if (pimpl_)
-    pimpl_->unref();
 }
 
 void Comm::wait(double timeout) {
-  xbt_assert(state_ == started || state_ == inited);
+  xbt_assert(state_ == started || state_ == inited || state_ == finished);
+
+  if (state_ == finished)
+    return;
 
   if (state_ == started) {
     simcall_comm_wait(pimpl_, timeout);
     state_ = finished;
-    pimpl_->unref();
     return;
   }
 
@@ -143,61 +129,45 @@ void Comm::wait(double timeout) {
         userData_, timeout, rate_);
   }
   state_ = finished;
-  if (pimpl_)
-    pimpl_->unref();
 }
 
-void Comm::send_detached(MailboxPtr dest, void* data, int simulatedSize)
+void Comm::detach()
 {
-  s4u::CommPtr res = CommPtr(s4u::Comm::send_init(dest));
-  res->setRemains(simulatedSize);
-  res->srcBuff_     = data;
-  res->srcBuffSize_ = sizeof(void*);
-  res->detached_    = true;
-  res->start();
-}
-
-s4u::CommPtr Comm::send_async(MailboxPtr dest, void* data, int simulatedSize)
-{
-  xbt_assert(data != nullptr, "You cannot send null");
-  s4u::CommPtr res = CommPtr(s4u::Comm::send_init(dest));
-  res->setRemains(simulatedSize);
-  res->srcBuff_     = data;
-  res->srcBuffSize_ = sizeof(void*);
-  res->start();
-  return res;
-}
-
-s4u::CommPtr Comm::recv_async(MailboxPtr dest, void** data)
-{
-  s4u::CommPtr res = CommPtr(s4u::Comm::recv_init(dest));
-  res->setDstData(data, sizeof(*data));
-  res->start();
-  return res;
+  xbt_assert(state_ == inited, "You cannot detach communications once they are started.");
+  xbt_assert(srcBuff_ != nullptr && srcBuffSize_ != 0, "You can only detach sends, not recvs");
+  detached_ = true;
+  start();
 }
 
 void Comm::cancel()
 {
-  simgrid::kernel::activity::CommImpl* commPimpl = static_cast<simgrid::kernel::activity::CommImpl*>(pimpl_);
+  simgrid::kernel::activity::CommImplPtr commPimpl =
+      boost::static_pointer_cast<simgrid::kernel::activity::CommImpl>(pimpl_);
   commPimpl->cancel();
 }
 
-bool Comm::test() {
+bool Comm::test()
+{
   xbt_assert(state_ == inited || state_ == started || state_ == finished);
-  
-  if (state_ == finished) 
-    xbt_die("Don't call test on a finished comm.");
-  
+
+  if (state_ == finished) {
+    return true;
+  }
+
   if (state_ == inited) {
     this->start();
   }
-  
+
   if(simcall_comm_test(pimpl_)){
     state_ = finished;
-    pimpl_->unref();
     return true;
   }
   return false;
+}
+
+MailboxPtr Comm::getMailbox()
+{
+  return mailbox_;
 }
 
 void intrusive_ptr_release(simgrid::s4u::Comm* c)

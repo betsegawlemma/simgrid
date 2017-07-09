@@ -29,7 +29,7 @@ set(EXTRA_DIST
   src/simix/smx_io_private.h
   src/simix/smx_network_private.h
   src/simix/smx_private.h
-  src/simix/smx_synchro_private.h
+  src/simix/smx_synchro_private.hpp
   src/smpi/colls/coll_tuned_topo.h
   src/smpi/colls/colls_private.h
   src/smpi/colls/smpi_mvapich2_selector_stampede.h
@@ -53,6 +53,7 @@ set(EXTRA_DIST
   src/surf/xml/simgrid_dtd.c
   src/surf/xml/surfxml_sax_cb.cpp
 
+  src/surf/FileImpl.hpp
   src/surf/StorageImpl.hpp
   src/surf/storage_n11.hpp
   src/surf/surf_interface.hpp
@@ -276,7 +277,7 @@ set(XBT_SRC
   src/xbt/xbt_log_layout_simple.c
   src/xbt/xbt_main.cpp
   src/xbt/xbt_os_file.c
-  src/xbt/xbt_os_synchro.c
+  src/xbt/xbt_os_synchro.cpp
   src/xbt/xbt_os_time.c
   src/xbt/xbt_replay.cpp
   src/xbt/xbt_str.cpp
@@ -326,6 +327,7 @@ set(SURF_SRC
   src/surf/cpu_interface.cpp
   src/surf/cpu_ti.cpp
   src/surf/fair_bottleneck.cpp
+  src/surf/FileImpl.cpp
   src/surf/instr_routing.cpp
   src/surf/instr_surf.cpp
   src/surf/lagrange.cpp
@@ -1070,6 +1072,7 @@ set(PLATFORMS_EXAMPLES
   examples/platforms/bypassRoute.xml
   examples/platforms/cloud.xml
   examples/platforms/cluster.xml
+  examples/platforms/cluster_backbone.xml
   examples/platforms/cluster_and_one_host.xml
   examples/platforms/cluster_prototype.lua
   examples/platforms/cluster_no_backbone.xml
@@ -1126,7 +1129,6 @@ set(PLATFORMS_EXAMPLES
   examples/platforms/syscoord/median_meridian.syscoord
   examples/platforms/syscoord/median_p2psim.syscoord
   examples/platforms/three_multicore_hosts.xml
-  examples/platforms/two_clusters.xml
   examples/platforms/two_hosts.xml
   examples/platforms/two_hosts_platform_shared.xml
   examples/platforms/two_hosts_platform_with_availability.xml

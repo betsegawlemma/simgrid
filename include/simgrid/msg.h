@@ -7,8 +7,25 @@
 #ifndef MSG_H
 #define MSG_H
 
+#include "simgrid/datatypes.h"
 #include "simgrid/forward.h"
+#include "simgrid/host.h"
+
+#include "xbt/base.h"
+#include "xbt/dict.h"
+#include "xbt/dynar.h"
+
+#ifdef __cplusplus
 #include "simgrid/simix.h"
+namespace simgrid {
+namespace msg {
+class Comm;
+}
+}
+typedef simgrid::msg::Comm sg_msg_Comm;
+#else
+typedef struct msg_Comm sg_msg_Comm;
+#endif
 
 SG_BEGIN_DECL()
 
@@ -57,21 +74,7 @@ typedef struct msg_task *msg_task_t;
 typedef msg_host_t msg_vm_t;
 
 /* ******************************** File ************************************ */
-
-typedef struct simdata_file* simdata_file_t;
-
-typedef struct msg_file_priv {
-  char *fullpath;
-  sg_size_t size;
-  char* mount_point;
-  char* storageId;
-  char* storage_type;
-  int desc_id;
-  void *data;
-  simdata_file_t simdata;
-} s_msg_file_priv_t;
-
-typedef struct msg_file_priv* msg_file_t;
+typedef sg_file_t msg_file_t;
 
 /* ******************************** Storage ************************************ */
 
@@ -88,7 +91,7 @@ typedef sg_storage_t msg_storage_t;
  *
  * Object representing an ongoing communication between processes. Such beast is usually obtained by using #MSG_task_isend, #MSG_task_irecv or friends.
  */
-typedef struct msg_comm *msg_comm_t;
+typedef sg_msg_Comm* msg_comm_t;
 
 /** \brief Default value for an uninitialized #msg_task_t.
     \ingroup m_task_management
@@ -212,7 +215,6 @@ XBT_PUBLIC(void) MSG_file_dump(msg_file_t fd);
 XBT_PUBLIC(msg_error_t) MSG_file_unlink(msg_file_t fd);
 XBT_PUBLIC(msg_error_t) MSG_file_seek(msg_file_t fd, sg_offset_t offset, int origin);
 XBT_PUBLIC(sg_size_t) MSG_file_tell (msg_file_t fd);
-XBT_PUBLIC(void) __MSG_file_get_info(msg_file_t fd);
 XBT_PUBLIC(const char *) MSG_file_get_name(msg_file_t file);
 XBT_PUBLIC(msg_error_t) MSG_file_move(msg_file_t fd, const char* fullpath);
 XBT_PUBLIC(msg_error_t) MSG_file_rcopy(msg_file_t fd, msg_host_t host, const char* fullpath);
@@ -301,6 +303,7 @@ XBT_PUBLIC(int) MSG_process_get_PPID(msg_process_t process);
 XBT_PUBLIC(const char *) MSG_process_get_name(msg_process_t process);
 XBT_PUBLIC(int) MSG_process_self_PID();
 XBT_PUBLIC(int) MSG_process_self_PPID();
+XBT_PUBLIC(const char*) MSG_process_self_name();
 XBT_PUBLIC(msg_process_t) MSG_process_self();
 XBT_PUBLIC(xbt_dynar_t) MSG_processes_as_dynar();
 XBT_PUBLIC(int) MSG_process_get_number();
@@ -389,8 +392,9 @@ XBT_PUBLIC(msg_error_t) MSG_task_receive_bounded(msg_task_t * task, const char *
 
 XBT_PUBLIC(msg_comm_t) MSG_task_isend(msg_task_t task, const char *alias);
 XBT_PUBLIC(msg_comm_t) MSG_task_isend_bounded(msg_task_t task, const char *alias, double maxrate);
-XBT_PUBLIC(msg_comm_t) MSG_task_isend_with_matching(msg_task_t task, const char *alias,
-    int (*match_fun)(void*,void*, smx_activity_t), void *match_data);
+XBT_PUBLIC(msg_comm_t)
+MSG_task_isend_with_matching(msg_task_t task, const char* alias, int (*match_fun)(void*, void*, void*),
+                             void* match_data);
 
 XBT_PUBLIC(void) MSG_task_dsend(msg_task_t task, const char *alias, void_f_pvoid_t cleanup);
 XBT_PUBLIC(void) MSG_task_dsend_bounded(msg_task_t task, const char *alias, void_f_pvoid_t cleanup, double maxrate);

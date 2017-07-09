@@ -105,7 +105,7 @@ endif()
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 
 set(SIMGRID_VERSION_MAJOR "3")
-set(SIMGRID_VERSION_MINOR "16")
+set(SIMGRID_VERSION_MINOR "17")
 set(SIMGRID_VERSION_PATCH "0")
 set(SIMGRID_VERSION_EXTRA "-DEVEL") # Extra words to add to version string (e.g. -rc1)
 
@@ -160,11 +160,11 @@ SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 
 ### Compute the include paths
 set(INCLUDES
+  ${CMAKE_BINARY_DIR}
+  ${CMAKE_BINARY_DIR}/include
   ${CMAKE_HOME_DIRECTORY}
   ${CMAKE_HOME_DIRECTORY}/include
   ${CMAKE_HOME_DIRECTORY}/src/include
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_BINARY_DIR}/include
   )
 
 if(NOT CMAKE_CROSSCOMPILING AND EXISTS /usr/include/)

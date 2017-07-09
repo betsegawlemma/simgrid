@@ -32,7 +32,7 @@ public:
 
   explicit HostChord(simgrid::s4u::Host* ptr) : host(ptr)
   {
-    std::string descr = std::string("RngSream<") + host->cname() + ">";
+    std::string descr = std::string("RngSream<") + host->getCname() + ">";
     stream_           = RngStream_CreateStream(descr.c_str());
   }
 
@@ -63,9 +63,9 @@ public:
   int answer_id      = -1;            // answer (used by some types of messages)
   simgrid::s4u::MailboxPtr answer_to; // mailbox to send an answer to (if any)
 
-  explicit ChordMessage(e_message_type_t type) : type(type)
+  explicit ChordMessage(e_message_type_t type)
+      : type(type), issuer_host_name(simgrid::s4u::this_actor::getHost()->getName())
   {
-    issuer_host_name = simgrid::s4u::this_actor::host()->name();
   }
 
   ~ChordMessage() = default;
@@ -129,7 +129,7 @@ public:
     simgrid::s4u::CommPtr comm_receive = nullptr;
     while ((now < (start_time_ + deadline_)) && now < MAX_SIMULATION_TIME) {
       if (comm_receive == nullptr)
-        comm_receive = simgrid::s4u::this_actor::irecv(mailbox_, &data);
+        comm_receive = mailbox_->get_async(&data);
       while ((now < (start_time_ + deadline_)) && now < MAX_SIMULATION_TIME && not comm_receive->test()) {
         // no task was received: make some periodic calls
         if (now >= next_stabilize_date) {

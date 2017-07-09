@@ -28,7 +28,7 @@ int peer_execute_task(peer_t peer, msg_task_t task)
 {
   int done = 0;
   message_t msg = MSG_task_get_data(task);
-  
+
   XBT_DEBUG("Peer %s got message of type %d\n", peer->me, msg->type);
   if (msg->type == MESSAGE_BUILD_CHAIN)
     peer_init_chain(peer, msg);
@@ -39,7 +39,7 @@ int peer_execute_task(peer_t peer, msg_task_t task)
     peer->pieces++;
     peer->bytes += msg->data_length;
     if (peer->pieces >= peer->total_pieces) {
-      XBT_DEBUG("%d pieces receieved", peer->pieces);
+      XBT_DEBUG("%d pieces received", peer->pieces);
       done = 1;
     }
   }
@@ -130,7 +130,7 @@ void peer_delete(peer_t p)
 
 void peer_print_stats(peer_t p, float elapsed_time)
 {
-  XBT_INFO("### %f %llu bytes (Avg %f MB/s); copy finished (simulated).", elapsed_time, p->bytes, p->bytes / 1024.0 / 1024.0 / elapsed_time); 
+  XBT_INFO("### %f %llu bytes (Avg %f MB/s); copy finished (simulated).", elapsed_time, p->bytes, p->bytes / 1024.0 / 1024.0 / elapsed_time);
 }
 
 /** Peer function  */

@@ -38,12 +38,13 @@
 #include "src/mc/remote/Client.hpp"
 #include "src/mc/remote/mc_protocol.h"
 #include <stdlib.h>
-#endif 
+#endif
 
 #include "src/mc/mc_record.h"
 
 #if HAVE_SMPI
 #include "src/smpi/private.h"
+#include "src/smpi/private.hpp"
 #endif
 
 XBT_LOG_NEW_CATEGORY(simix, "All SIMIX categories");
@@ -340,8 +341,8 @@ static int process_syscall_color(void *p)
   case SIMCALL_NONE:
   case SIMCALL_PROCESS_KILL:
     return 2;
-  case SIMCALL_PROCESS_RESUME:
-    return 1;
+  //  case SIMCALL_PROCESS_RESUME:
+  //    return 1;
   default:
     return 0;
   }
@@ -356,7 +357,7 @@ static void SIMIX_wake_processes()
     XBT_DEBUG("Handling the processes whose action failed (if any)");
     while ((action = surf_model_extract_failed_action_set(model))) {
       XBT_DEBUG("   Handling Action %p",action);
-      SIMIX_simcall_exit((smx_activity_t) action->getData());
+      SIMIX_simcall_exit(static_cast<simgrid::kernel::activity::ActivityImpl*>(action->getData()));
     }
     XBT_DEBUG("Handling the processes whose action terminated normally (if any)");
     while ((action = surf_model_extract_done_action_set(model))) {
@@ -364,7 +365,7 @@ static void SIMIX_wake_processes()
       if (action->getData() == nullptr)
         XBT_DEBUG("probably vcpu's action %p, skip", action);
       else
-        SIMIX_simcall_exit((smx_activity_t) action->getData());
+        SIMIX_simcall_exit(static_cast<simgrid::kernel::activity::ActivityImpl*>(action->getData()));
     }
   }
 }
@@ -540,7 +541,7 @@ void SIMIX_run()
 
     /* Autorestart all process */
     for (auto host: host_that_restart) {
-      XBT_INFO("Restart processes on host %s", host->cname());
+      XBT_INFO("Restart processes on host %s", host->getCname());
       SIMIX_host_autorestart(host);
     }
     host_that_restart.clear();
@@ -653,19 +654,19 @@ void SIMIX_display_process_status()
 
       const char* synchro_description = "unknown";
 
-      if (dynamic_cast<simgrid::kernel::activity::ExecImpl*>(process->waiting_synchro) != nullptr)
+      if (boost::dynamic_pointer_cast<simgrid::kernel::activity::ExecImpl>(process->waiting_synchro) != nullptr)
         synchro_description = "execution";
 
-      if (dynamic_cast<simgrid::kernel::activity::CommImpl*>(process->waiting_synchro) != nullptr)
+      if (boost::dynamic_pointer_cast<simgrid::kernel::activity::CommImpl>(process->waiting_synchro) != nullptr)
         synchro_description = "communication";
 
-      if (dynamic_cast<simgrid::kernel::activity::SleepImpl*>(process->waiting_synchro) != nullptr)
+      if (boost::dynamic_pointer_cast<simgrid::kernel::activity::SleepImpl>(process->waiting_synchro) != nullptr)
         synchro_description = "sleeping";
 
-      if (dynamic_cast<simgrid::kernel::activity::Raw*>(process->waiting_synchro) != nullptr)
+      if (boost::dynamic_pointer_cast<simgrid::kernel::activity::RawImpl>(process->waiting_synchro) != nullptr)
         synchro_description = "synchronization";
 
-      if (dynamic_cast<simgrid::kernel::activity::Io*>(process->waiting_synchro) != nullptr)
+      if (boost::dynamic_pointer_cast<simgrid::kernel::activity::IoImpl>(process->waiting_synchro) != nullptr)
         synchro_description = "I/O";
 
 
@@ -681,11 +682,11 @@ void SIMIX_display_process_status()
 */
 
       XBT_INFO("Process %lu (%s@%s): waiting for %s synchro %p (%s) in state %d to finish", process->pid,
-               process->cname(), process->host->cname(), synchro_description, process->waiting_synchro,
+               process->cname(), process->host->getCname(), synchro_description, process->waiting_synchro.get(),
                process->waiting_synchro->name.c_str(), (int)process->waiting_synchro->state);
     }
     else {
-      XBT_INFO("Process %lu (%s@%s)", process->pid, process->cname(), process->host->cname());
+      XBT_INFO("Process %lu (%s@%s)", process->pid, process->cname(), process->host->getCname());
     }
   }
 }

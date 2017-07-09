@@ -6,6 +6,8 @@
 #include "simgrid/s4u/VirtualMachine.hpp"
 #include "src/simix/ActorImpl.hpp"
 #include "src/surf/HostImpl.hpp"
+#include <algorithm>
+#include <deque>
 
 #ifndef VM_INTERFACE_HPP_
 #define VM_INTERFACE_HPP_
@@ -95,6 +97,7 @@ public:
   e_surf_vm_state_t getState();
   void setState(e_surf_vm_state_t state);
   static std::deque<s4u::VirtualMachine*> allVms_;
+  int coreAmount() { return coreAmount_; }
 
   bool isMigrating = false;
 

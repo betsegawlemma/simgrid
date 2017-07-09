@@ -48,25 +48,31 @@ s_surf_model_description_t surf_plugin_description[] = {
 
 /* Don't forget to update the option description in smx_config when you change this */
 s_surf_model_description_t surf_network_model_description[] = {
-  {"LV08", "Realistic network analytic model (slow-start modeled by multiplying latency by 10.4, bandwidth by .92; bottleneck sharing uses a payload of S=8775 for evaluating RTT). ",
-   &surf_network_model_init_LegrandVelho},
-  {"Constant",
-   "Simplistic network model where all communication take a constant time (one second). This model provides the lowest realism, but is (marginally) faster.",
-   &surf_network_model_init_Constant},
-  {"SMPI", "Realistic network model specifically tailored for HPC settings (accurate modeling of slow start with correction factors on three intervals: < 1KiB, < 64 KiB, >= 64 KiB)",
-   &surf_network_model_init_SMPI},
-  {"IB", "Realistic network model specifically tailored for HPC settings, with Infiniband contention model",
-   &surf_network_model_init_IB},
-  {"CM02", "Legacy network analytic model (Very similar to LV08, but without corrective factors. The timings of small messages are thus poorly modeled).",
-   &surf_network_model_init_CM02},
-  {"NS3", "Network pseudo-model using the NS3 tcp model instead of an analytic model", &surf_network_model_init_NS3},
-  {"Reno",  "Model from Steven H. Low using lagrange_solve instead of lmm_solve (experts only; check the code for more info).",
-   &surf_network_model_init_Reno},
-  {"Reno2", "Model from Steven H. Low using lagrange_solve instead of lmm_solve (experts only; check the code for more info).",
-   &surf_network_model_init_Reno2},
-  {"Vegas", "Model from Steven H. Low using lagrange_solve instead of lmm_solve (experts only; check the code for more info).",
-   &surf_network_model_init_Vegas},
-  {nullptr, nullptr, nullptr}      /* this array must be nullptr terminated */
+    {"LV08", "Realistic network analytic model (slow-start modeled by multiplying latency by 13.01, bandwidth by .97; "
+             "bottleneck sharing uses a payload of S=20537 for evaluating RTT). ",
+     &surf_network_model_init_LegrandVelho},
+    {"Constant", "Simplistic network model where all communication take a constant time (one second). This model "
+                 "provides the lowest realism, but is (marginally) faster.",
+     &surf_network_model_init_Constant},
+    {"SMPI", "Realistic network model specifically tailored for HPC settings (accurate modeling of slow start with "
+             "correction factors on three intervals: < 1KiB, < 64 KiB, >= 64 KiB)",
+     &surf_network_model_init_SMPI},
+    {"IB", "Realistic network model specifically tailored for HPC settings, with Infiniband contention model",
+     &surf_network_model_init_IB},
+    {"CM02", "Legacy network analytic model (Very similar to LV08, but without corrective factors. The timings of "
+             "small messages are thus poorly modeled).",
+     &surf_network_model_init_CM02},
+    {"NS3", "Network pseudo-model using the NS3 tcp model instead of an analytic model", &surf_network_model_init_NS3},
+    {"Reno",
+     "Model from Steven H. Low using lagrange_solve instead of lmm_solve (experts only; check the code for more info).",
+     &surf_network_model_init_Reno},
+    {"Reno2",
+     "Model from Steven H. Low using lagrange_solve instead of lmm_solve (experts only; check the code for more info).",
+     &surf_network_model_init_Reno2},
+    {"Vegas",
+     "Model from Steven H. Low using lagrange_solve instead of lmm_solve (experts only; check the code for more info).",
+     &surf_network_model_init_Vegas},
+    {nullptr, nullptr, nullptr} /* this array must be nullptr terminated */
 };
 
 #if ! HAVE_SMPI
@@ -374,6 +380,8 @@ void surf_exit()
     delete stype->model_properties;
     free(stype);
   }
+  for (auto s : *simgrid::surf::StorageImpl::storages)
+    delete s.second;
   delete simgrid::surf::StorageImpl::storages;
 
   for (auto model : *all_existing_models)
@@ -734,11 +742,11 @@ void Action::setMaxDuration(double duration)
 
 void Action::gapRemove() {}
 
-void Action::setPriority(double priority)
+void Action::setSharingWeight(double weight)
 {
-  XBT_IN("(%p,%g)", this, priority);
-  priority_ = priority;
-  lmm_update_variable_weight(getModel()->getMaxminSystem(), getVariable(), priority);
+  XBT_IN("(%p,%g)", this, weight);
+  sharingWeight_ = weight;
+  lmm_update_variable_weight(getModel()->getMaxminSystem(), getVariable(), weight);
 
   if (getModel()->getUpdateMechanism() == UM_LAZY)
     heapRemove(getModel()->getActionHeap());
@@ -780,7 +788,8 @@ void Action::suspend()
     lmm_update_variable_weight(getModel()->getMaxminSystem(), getVariable(), 0.0);
     if (getModel()->getUpdateMechanism() == UM_LAZY){
       heapRemove(getModel()->getActionHeap());
-      if (getModel()->getUpdateMechanism() == UM_LAZY  && stateSet_ == getModel()->getRunningActionSet() && priority_ > 0){
+      if (getModel()->getUpdateMechanism() == UM_LAZY && stateSet_ == getModel()->getRunningActionSet() &&
+          sharingWeight_ > 0) {
         //If we have a lazy model, we need to update the remaining value accordingly
         updateRemainingLazy(surf_get_clock());
       }
@@ -794,7 +803,7 @@ void Action::resume()
 {
   XBT_IN("(%p)", this);
   if (suspended_ != 2) {
-    lmm_update_variable_weight(getModel()->getMaxminSystem(), getVariable(), priority_);
+    lmm_update_variable_weight(getModel()->getMaxminSystem(), getVariable(), sharingWeight_);
     suspended_ = 0;
     if (getModel()->getUpdateMechanism() == UM_LAZY)
       heapRemove(getModel()->getActionHeap());
@@ -869,7 +878,7 @@ void Action::updateRemainingLazy(double now)
   else
   {
     xbt_assert(stateSet_ == getModel()->getRunningActionSet(), "You're updating an action that is not running.");
-    xbt_assert(priority_ > 0, "You're updating an action that seems suspended.");
+    xbt_assert(sharingWeight_ > 0, "You're updating an action that seems suspended.");
   }
 
   delta = now - lastUpdate_;

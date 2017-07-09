@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016. The SimGrid Team. All rights reserved.          */
+/* Copyright (c) 2015-2017. The SimGrid Team. All rights reserved.          */
 
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
@@ -28,11 +28,10 @@ static void log_action(const char *const *action, double date)
 
 static msg_file_t get_file_descriptor(const char *file_name){
   char full_name[1024];
-  msg_file_t file = NULL;
 
   snprintf(full_name,1023, "%s:%s", MSG_process_get_name(MSG_process_self()), file_name);
 
-  file = (msg_file_t) xbt_dict_get_or_null(opened_files, full_name);
+  msg_file_t file = (msg_file_t)xbt_dict_get_or_null(opened_files, full_name);
   return file;
 }
 
@@ -65,12 +64,11 @@ static void action_open(const char *const *action) {
 static void action_read(const char *const *action) {
   const char *file_name = action[2];
   const char *size_str = action[3];
-  msg_file_t file = NULL;
   sg_size_t size = parse_size(size_str);
 
   double clock = MSG_get_clock();
 
-  file = get_file_descriptor(file_name);
+  msg_file_t file = get_file_descriptor(file_name);
 
   ACT_DEBUG("Entering Read: %s (size: %llu)", NAME, size);
   MSG_file_read(file, size);

@@ -4,12 +4,14 @@
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "../surf/StorageImpl.hpp"
+#include "simgrid/s4u/Host.hpp"
 #include "simgrid/s4u/Storage.hpp"
 #include "simgrid/simix.hpp"
 #include <unordered_map>
 
 namespace simgrid {
 namespace s4u {
+
 std::map<std::string, Storage*>* allStorages()
 {
   std::unordered_map<std::string, surf::StorageImpl*>* map = surf::StorageImpl::storagesMap();
@@ -28,46 +30,52 @@ Storage* Storage::byName(const char* name)
   return &res->piface_;
 }
 
-const char* Storage::name()
+const char* Storage::getName()
 {
   return pimpl_->cname();
 }
 
-const char* Storage::host()
+const char* Storage::getType()
 {
-  return pimpl_->attach_;
+  return pimpl_->typeId_.c_str();
 }
 
-sg_size_t Storage::sizeFree()
+Host* Storage::getHost()
+{
+  return attached_to_;
+}
+
+sg_size_t Storage::getSizeFree()
 {
   return simgrid::simix::kernelImmediate([this] { return pimpl_->getFreeSize(); });
 }
 
-sg_size_t Storage::sizeUsed()
+sg_size_t Storage::getSizeUsed()
 {
   return simgrid::simix::kernelImmediate([this] { return pimpl_->getUsedSize(); });
 }
 
-sg_size_t Storage::size() {
+sg_size_t Storage::getSize()
+{
   return pimpl_->size_;
 }
 
-xbt_dict_t Storage::properties()
+xbt_dict_t Storage::getProperties()
 {
   return simgrid::simix::kernelImmediate([this] { return pimpl_->getProperties(); });
 }
 
-const char* Storage::property(const char* key)
+const char* Storage::getProperty(const char* key)
 {
-  return static_cast<const char*>(xbt_dict_get_or_null(this->properties(), key));
+  return static_cast<const char*>(xbt_dict_get_or_null(this->getProperties(), key));
 }
 
 void Storage::setProperty(const char* key, char* value)
 {
-  xbt_dict_set(this->properties(), key, value, nullptr);
+  xbt_dict_set(this->getProperties(), key, value, nullptr);
 }
 
-std::map<std::string, sg_size_t*>* Storage::content()
+std::map<std::string, sg_size_t>* Storage::getContent()
 {
   return simgrid::simix::kernelImmediate([this] { return pimpl_->getContent(); });
 }

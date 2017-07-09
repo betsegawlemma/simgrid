@@ -12,31 +12,18 @@ namespace activity {
 ActivityImpl::ActivityImpl()  = default;
 ActivityImpl::~ActivityImpl() = default;
 
-void ActivityImpl::ref()
-{
-  // Atomic operation! Do not split in two instructions!
-  xbt_assert(refcount_ != 0);
-  refcount_++;
-}
-
-void ActivityImpl::unref()
-{
-  xbt_assert(refcount_ > 0,
-             "This activity has a negative refcount! You can only call test() or wait() once per activity.");
-  refcount_--;
-  if (refcount_ == 0)
-    delete this;
-}
-
 // boost::intrusive_ptr<Activity> support:
 void intrusive_ptr_add_ref(simgrid::kernel::activity::ActivityImpl* activity)
 {
-  activity->ref();
+  activity->refcount_.fetch_add(1, std::memory_order_relaxed);
 }
 
 void intrusive_ptr_release(simgrid::kernel::activity::ActivityImpl* activity)
 {
-  activity->unref();
+  if (activity->refcount_.fetch_sub(1, std::memory_order_release) == 1) {
+    std::atomic_thread_fence(std::memory_order_acquire);
+    delete activity;
+  }
 }
 }
 }

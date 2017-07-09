@@ -69,19 +69,8 @@ public:
   /** @brief Return the storage of corresponding mount point */
   virtual simgrid::surf::StorageImpl* findStorageOnMountList(const char* storage);
 
-  /** @brief Get the xbt_dict_t of mount_point: Storage */
-  virtual xbt_dict_t getMountedStorageList();
-
   /** @brief Get the xbt_dynar_t of storages attached to the Host */
   virtual void getAttachedStorageList(std::vector<const char*>* storages);
-
-  /**
-   * @brief Open a file
-   *
-   * @param fullpath The full path to the file
-   * @return The StorageAction corresponding to the opening
-   */
-  virtual Action* open(const char* fullpath);
 
   /**
    * @brief Close a file
@@ -90,23 +79,6 @@ public:
    * @return The StorageAction corresponding to the closing
    */
   virtual Action* close(surf_file_t fd);
-
-  /**
-   * @brief Unlink a file
-   * @details [long description]
-   *
-   * @param fd [description]
-   * @return [description]
-   */
-  virtual int unlink(surf_file_t fd);
-
-  /**
-   * @brief Get the size in bytes of the file
-   *
-   * @param fd The file descriptor to read
-   * @return The size in bytes of the file
-   */
-  virtual sg_size_t getSize(surf_file_t fd);
 
   /**
    * @brief Read a file
@@ -125,53 +97,6 @@ public:
    * @return The StorageAction corresponding to the writing
    */
   virtual Action* write(surf_file_t fd, sg_size_t size);
-
-  /**
-   * @brief Get the information of a file descriptor
-   * @details The returned xbt_dynar_t contains:
-   *  - the size of the file,
-   *  - the mount point,
-   *  - the storage name,
-   *  - the storage typeId,
-   *  - the storage content type
-   *
-   * @param fd The file descriptor
-   * @return An xbt_dynar_t with the file information
-   */
-  virtual xbt_dynar_t getInfo(surf_file_t fd);
-
-  /**
-   * @brief Get the current position of the file descriptor
-   *
-   * @param fd The file descriptor
-   * @return The current position of the file descriptor
-   */
-  virtual sg_size_t fileTell(surf_file_t fd);
-
-  /**
-   * @brief Set the position indicator associated with the file descriptor to a new position
-   * @details [long description]
-   *
-   * @param fd The file descriptor
-   * @param offset The offset from the origin
-   * @param origin Position used as a reference for the offset
-   *  - SEEK_SET: beginning of the file
-   *  - SEEK_CUR: current position indicator
-   *  - SEEK_END: end of the file
-   * @return MSG_OK if successful, otherwise MSG_TASK_CANCELED
-   */
-  virtual int fileSeek(surf_file_t fd, sg_offset_t offset, int origin);
-
-  /**
-   * @brief Move a file to another location on the *same mount point*.
-   * @details [long description]
-   *
-   * @param fd The file descriptor
-   * @param fullpath The new full path
-   * @return MSG_OK if successful, MSG_TASK_CANCELED and a warning if the new
-   * full path is not on the same mount point
-   */
-  virtual int fileMove(surf_file_t fd, const char* fullpath);
 
   std::map<std::string, simgrid::surf::StorageImpl*> storage_;
   simgrid::s4u::Host* piface_ = nullptr;

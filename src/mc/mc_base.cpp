@@ -79,7 +79,7 @@ bool request_is_enabled(smx_simcall_t req)
   {
     /* FIXME: check also that src and dst processes are not suspended */
     simgrid::kernel::activity::CommImpl* act =
-        static_cast<simgrid::kernel::activity::CommImpl*>(simcall_comm_wait__get__comm(req));
+        static_cast<simgrid::kernel::activity::CommImpl*>(simcall_comm_wait__getraw__comm(req));
 
 #if SIMGRID_HAVE_MC
     // Fetch from MCed memory:
@@ -91,9 +91,9 @@ bool request_is_enabled(smx_simcall_t req)
     }
 #endif
 
-    if (simcall_comm_wait__get__timeout(req) >= 0) {
-      /* If it has a timeout it will be always be enabled, because even if the
-       * communication is not ready, it can timeout and won't block. */
+    if (act->src_timeout || act->dst_timeout) {
+      /* If it has a timeout it will be always be enabled (regardless of who declared the timeout),
+       * because even if the communication is not ready, it can timeout and won't block. */
       if (_sg_mc_timeout == 1)
         return true;
     }
@@ -107,7 +107,7 @@ bool request_is_enabled(smx_simcall_t req)
   case SIMCALL_COMM_WAITANY: {
     xbt_dynar_t comms;
     simgrid::kernel::activity::CommImpl* act =
-        static_cast<simgrid::kernel::activity::CommImpl*>(simcall_comm_wait__get__comm(req));
+        static_cast<simgrid::kernel::activity::CommImpl*>(simcall_comm_wait__getraw__comm(req));
 
 #if SIMGRID_HAVE_MC
     s_xbt_dynar_t comms_buffer;

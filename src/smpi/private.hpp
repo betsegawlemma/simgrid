@@ -20,7 +20,7 @@
 #define TOPAGE(addr) (void *)(((unsigned long)(addr) / xbt_pagesize) * xbt_pagesize)
 
 #if HAVE_PAPI
-typedef 
+typedef
     std::vector<std::pair</* counter name */std::string, /* counter value */long long>> papi_counter_t;
 XBT_PRIVATE papi_counter_t& smpi_process_papi_counters();
 XBT_PRIVATE int smpi_process_papi_event_set();
@@ -33,5 +33,15 @@ extern "C" {
 XBT_PUBLIC(smpi_trace_call_location_t*) smpi_process_get_call_location();
 XBT_PUBLIC(smpi_trace_call_location_t*) smpi_trace_get_call_location();
 }
+
+typedef enum {
+  SMPI_PRIVATIZE_NONE    = 0,
+  SMPI_PRIVATIZE_MMAP    = 1,
+  SMPI_PRIVATIZE_DLOPEN  = 2,
+  SMPI_PRIVATIZE_DEFAULT = SMPI_PRIVATIZE_MMAP
+} smpi_priv_strategies;
+
+extern XBT_PRIVATE int smpi_privatize_global_variables;
+
 #endif
 

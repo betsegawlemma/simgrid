@@ -4,9 +4,11 @@
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
 #include "simgrid/s4u/Host.hpp"
+#include <climits>
 
 #include "src/simix/smx_private.h"
 #include "src/smpi/private.h"
+#include "src/smpi/private.hpp"
 #include "src/smpi/smpi_comm.hpp"
 #include "src/smpi/smpi_coll.hpp"
 #include "src/smpi/smpi_datatype.hpp"
@@ -171,7 +173,7 @@ MPI_Comm Comm::get_leaders_comm(){
 }
 
 MPI_Comm Comm::get_intra_comm(){
-  if (this == MPI_COMM_UNINITIALIZED || this==MPI_COMM_WORLD) 
+  if (this == MPI_COMM_UNINITIALIZED || this==MPI_COMM_WORLD)
     return smpi_process()->comm_intra();
   else return intra_comm_;
 }
@@ -251,7 +253,7 @@ MPI_Comm Comm::split(int color, int key)
         }
         if(i != 0 && group_out != MPI_COMM_WORLD->group() && group_out != MPI_GROUP_EMPTY)
           Group::unref(group_out);
-        
+
         Request::waitall(reqs, requests, MPI_STATUS_IGNORE);
         xbt_free(requests);
       }
@@ -318,8 +320,8 @@ void Comm::init_smp(){
     smpi_process()->comm_world()->init_smp();
 
   int comm_size = this->size();
-  
-  // If we are in replay - perform an ugly hack  
+
+  // If we are in replay - perform an ugly hack
   // tell SimGrid we are not in replay for a while, because we need the buffers to be copied for the following calls
   bool replaying = false; //cache data to set it back again after
   if(smpi_process()->replaying()){
@@ -332,19 +334,20 @@ void Comm::init_smp(){
    }
   //identify neighbours in comm
   //get the indexes of all processes sharing the same simix host
-  xbt_swag_t process_list = SIMIX_host_self()->extension<simgrid::simix::Host>()->process_list;
-  int intra_comm_size     = 0;
-  int min_index           = INT_MAX;//the minimum index will be the leader
-  smx_actor_t actor       = nullptr;
-  xbt_swag_foreach(actor, process_list) {
-    int index = actor->pid -1;
+   xbt_swag_t process_list = sg_host_self()->extension<simgrid::simix::Host>()->process_list;
+   int intra_comm_size     = 0;
+   int min_index           = INT_MAX; // the minimum index will be the leader
+   smx_actor_t actor       = nullptr;
+   xbt_swag_foreach(actor, process_list)
+   {
+     int index = actor->pid - 1;
 
-    if(this->group()->rank(index)!=MPI_UNDEFINED){
-      intra_comm_size++;
-      //the process is in the comm
-      if(index < min_index)
-        min_index=index;
-    }
+     if (this->group()->rank(index) != MPI_UNDEFINED) {
+       intra_comm_size++;
+       // the process is in the comm
+       if (index < min_index)
+         min_index = index;
+     }
   }
   XBT_DEBUG("number of processes deployed on my node : %d", intra_comm_size);
   MPI_Group group_intra = new  Group(intra_comm_size);
@@ -469,9 +472,9 @@ void Comm::init_smp(){
     is_blocked_=global_blocked;
   }
   xbt_free(leader_list);
-  
+
   if(replaying)
-    smpi_process()->set_replaying(true); 
+    smpi_process()->set_replaying(true);
 }
 
 MPI_Comm Comm::f2c(int id) {
