@@ -185,8 +185,7 @@ NetworkNS3Model::NetworkNS3Model() :
   simgrid::s4u::onPlatformCreated.connect(&postparse_cb);
   simgrid::s4u::NetZone::onRouteCreation.connect(&routeCreation_cb);
 
-
-  //LogComponentEnable("PacketSink", ns3::LOG_LEVEL_INFO);
+  LogComponentEnable("PacketSink", ns3::LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoClientApplication", ns3::LOG_LEVEL_INFO);
   LogComponentEnable("UdpEchoServerApplication", ns3::LOG_LEVEL_INFO);
 }
@@ -507,6 +506,12 @@ void ns3_add_link(NetPointNs3* src, NetPointNs3* dst, double bw, double lat) {
   XBT_DEBUG("\tAdd PTP from %d to %d bw:'%f Bps' lat:'%fs'", srcNum, dstNum, bw, lat);
   pointToPoint.SetDeviceAttribute("DataRate", ns3::DataRateValue(ns3::DataRate(bw*8)));// NS3 takes bps, but we provide Bps
   pointToPoint.SetChannelAttribute("Delay", ns3::TimeValue(ns3::Seconds(lat)));
+
+  char *filename = bprintf("link-%d-%d.tr", srcNum, dstNum);
+  ns3::AsciiTraceHelper ascii;
+  pointToPoint.EnableAsciiAll (ascii.CreateFileStream (filename));
+  pointToPoint.EnablePcapAll ("tcp-bulk-send", false);
+  xbt_free(filename);
 
 /*
 
