@@ -78,7 +78,7 @@ void Comm::start() {
         userData_, rate_);
 
   } else {
-    xbt_assert(0, "Cannot start a communication before specifying whether we are the sender or the receiver");
+    xbt_die("Cannot start a communication before specifying whether we are the sender or the receiver");
   }
   state_ = started;
 }
@@ -172,7 +172,6 @@ MailboxPtr Comm::getMailbox()
 
 void intrusive_ptr_release(simgrid::s4u::Comm* c)
 {
-  return;
   if (c->refcount_.fetch_sub(1, std::memory_order_release) == 1) {
     std::atomic_thread_fence(std::memory_order_acquire);
     delete c;
