@@ -1,5 +1,5 @@
 /* Copyright (c) 2010-2017. The SimGrid Team. All rights reserved.          */
- 
+
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
@@ -78,7 +78,7 @@ void receiver(std::vector<std::string> args) {
 }
 
 int main(int argc, char* argv[]) {
-   
+
   /* Check if we got --NS3 on the command line, and activate ecofen if so */
   bool NS3 = false;
   for (int i = 0; i<argc; i++) {
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 	NS3 = true;
      }
      if (NS3)  // Found the --NS3 parameter; shift the rest of the line
-       argv[i] = argv[i+1];	  
+       argv[i] = argv[i+1];  
   }
   if (NS3) {
     XBT_INFO("Activating the Ecofen energy plugin");
@@ -105,14 +105,14 @@ int main(int argc, char* argv[]) {
 	  /* Use the simple, intuitive model of SimGrid, even if it's wrong on slow start */
 	 xbt_cfg_set_parse("network/model:CM02");
 
-   
+
   xbt_assert(argc > 1, "\nUsage: %s platform_file [datasize] [--NS3]\n"
       "\tExample: %s s4uplatform.xml \n"
       "\tIf you add NS3 as last parameter, this module will try to activate the ecofen plugin.\n"
       "\tWithout it, it will use the SimGrid link energy plugin.\n", argv[0],
       argv[0]);
   e->loadPlatform(argv[1]);
-  
+
   /* prepare to launch the actors */
   std::vector<std::string> argSender;
   std::vector<std::string> argReceiver;
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
   }
   simgrid::s4u::Actor::createActor("sender", simgrid::s4u::Host::by_name("SRC"), sender, argSender);
   simgrid::s4u::Actor::createActor("receiver", simgrid::s4u::Host::by_name("DST"), receiver, argReceiver);
-   
+
   /* And now, launch the simulation */
   e->run();
 

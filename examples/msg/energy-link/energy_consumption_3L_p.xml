@@ -14,23 +14,14 @@
 		<link id="L1" bandwidth="10Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
-<<<<<<< HEAD
-<<<<<<< HEAD
     <link id="L2" bandwidth="10Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
     <link id="L3" bandwidth="10Mbps" latency="10ms">
-=======
-=======
->>>>>>> 0cf72dba284580a226fe6852bba5a9301f9eb6d2
                 <link id="L2" bandwidth="10Mbps" latency="10ms">
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
                 <link id="L3" bandwidth="10Mbps" latency="10ms">
-<<<<<<< HEAD
->>>>>>> 0cf72dba284580a226fe6852bba5a9301f9eb6d2
-=======
->>>>>>> 0cf72dba284580a226fe6852bba5a9301f9eb6d2
 			<prop id="watt_range" value="10.3581:10.7479" />
 		</link>
 		<route src="SRC" dst="DST">
@@ -40,12 +31,12 @@
 		</route>
                 <route src="SRC" dst="R1">
                        <link_ctn id="L1"/>
-                </route> 
+                </route>
                 <route src="R1" dst="R2">
                        <link_ctn id="L2"/>
-                </route> 
+                </route>
                 <route src="R2" dst="DST">
                        <link_ctn id="L3"/>
-                </route> 
+                </route>
 	</AS>
 </platform>

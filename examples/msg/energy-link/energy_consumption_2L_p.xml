@@ -22,9 +22,9 @@
 		</route>
                 <route src="SRC" dst="R1">
                        <link_ctn id="L1"/>
-                </route> 
+                </route>
                 <route src="R1" dst="DST">
                        <link_ctn id="L2"/>
-                </route> 
+                </route>
 	</AS>
 </platform>

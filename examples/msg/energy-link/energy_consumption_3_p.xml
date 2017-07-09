@@ -32,12 +32,12 @@
 		</route>
                 <route src="SRC" dst="N1">
                        <link_ctn id="L1"/>
-                </route> 
+                </route>
                 <route src="N1" dst="N2">
                        <link_ctn id="L2"/>
-                </route> 
+                </route>
                 <route src="N2" dst="DST">
                        <link_ctn id="L3"/>
-                </route> 
+                </route>
 	</AS>
 </platform>
